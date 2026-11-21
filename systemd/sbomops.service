@@ -1,0 +1,20 @@
+[Unit]
+Description=sbomops: daily SBOM scan (syft) and vulnerability match (trivy)
+Documentation=file:///opt/sbomops/README.md
+After=network-online.target docker.service podman.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/sbomops/secrets.env
+ExecStart=/opt/sbomops/bin/sbomops run
+# 本業のサービスを優先する (sbomops 自身も子プロセスに nice / ionice を掛ける)
+Nice=19
+IOSchedulingClass=idle
+CPUWeight=20
+IOWeight=10
+TimeoutStartSec=6h
+# スキャンは読み取りだけ。書き込みは /var/lib/sbomops と assess で使う CLI のホームのみ
+ProtectSystem=full
+PrivateTmp=yes
+UMask=0077

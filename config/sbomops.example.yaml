@@ -1,0 +1,127 @@
+# sbomops の設定例。/etc/sbomops/config.yaml に置く (install.sh が無い場合だけコピーする)。
+# 省略した項目は既定値 (sbomops/config.py の DEFAULTS) が使われる。
+
+# host_label: web-01            # 通知に出す名前 (既定: hostname)
+data_dir: /var/lib/sbomops
+secrets_file: /etc/sbomops/secrets.env   # SLACK_WEBHOOK_URL=... (0600)
+
+# ---------------------------------------------------------------- 実行時の負荷
+resources:
+  nice: 19                      # CPU 優先度 (0-19、大きいほど低い)
+  ionice_class: idle            # idle | best-effort | none
+  mem_max: 4G                   # syft / trivy 1 プロセスの RSS 上限。超えたら kill して次へ
+  syft_parallelism: 2
+  # cgroup v2 + systemd なら、スコープでも制限できる:
+  # wrap: [systemd-run, --scope, -q, -p, MemoryMax=4G, -p, CPUQuota=50%]
+
+run:
+  scan_budget: 3h               # 1 回の run でスキャンに使う時間。超えた対象は翌日に回す
+  stale_factor: 2               # SBOM が every × 2 より古くなったら警告
+  rescan_on_os_change: true     # OS のメジャー更新 (os-release の変化) を検知したら全対象を作り直す
+
+# ---------------------------------------------------------------- スキャン対象 (分割の単位)
+# type:
+#   os-packages     OS のパッケージ DB (dpkg / rpm / apk ...) だけを読む。速いので毎日
+#   dir             ディレクトリ配下の言語パッケージ・バイナリ。path (1つ / リスト) か path_glob
+#                   path_glob や複数 path は「1 ディレクトリ = 1 単位」に展開される
+#   image           コンテナイメージ (ref: nginx:1.27 / docker:myapp:latest / registry:...)
+#   running-images  稼働中コンテナのイメージ (docker / podman)。イメージ ID が変わったら作り直す
+# 共通: every (周期)、max_runtime (1 単位の上限時間)、mem_max、exclude、syft_args、enabled
+targets:
+  - id: os
+    type: os-packages
+    every: 1d
+
+  - id: usr-local
+    type: dir
+    path: /usr/local
+    every: 7d
+
+  - id: opt
+    type: dir
+    path: /opt
+    every: 7d
+
+  # ディストリ外のバイナリ (Docker / NVIDIA などの外部リポジトリ) も /usr/bin に入るため対象にする。
+  # ディストリのパッケージが所有するファイルは noise.distro_owned でノイズ扱いになる
+  - id: sysbin
+    type: dir
+    path: [/usr/bin, /usr/sbin, /usr/libexec]
+    every: 3d
+
+  - id: home-tools
+    type: dir
+    path_glob: ["/home/*/.local", "/home/*/.nvm/versions/node", "/home/*/.cargo/bin", "/root/.local"]
+    exclude: ["./share/Trash/**", "./**/.cache/**"]
+    syft_args: [--select-catalogers, +javascript-package-cataloger]   # グローバル npm を拾う
+    every: 7d
+
+  # - id: projects
+  #   type: dir
+  #   path_glob: "/home/*/work/*"
+  #   exclude: ["./**/node_modules/.cache/**", "./**/docker/volumes/**"]
+  #   every: 7d
+
+  - id: containers
+    type: running-images
+    every: 7d
+
+# ---------------------------------------------------------------- 照合と付加情報
+trivy:
+  db_max_age: 3d
+  # db_repository: [registry.example.com/trivy-db:2]   # 閉域ではミラーを指定
+
+enrich:
+  kev: true                     # CISA KEV (既知の悪用あり)
+  epss: true                    # EPSS (30日以内の悪用確率)
+
+# ---------------------------------------------------------------- ノイズ判定
+noise:
+  old_kernels: true             # 起動中でない古いカーネルのパッケージ
+  distro_owned: true            # ディストリのパッケージが所有するファイル上の言語パッケージ/Go バイナリ
+                                # (OS パッケージ側の照合で追えるため。外部リポジトリのものは対象外)
+  package_cache: true
+  paths: []                     # 例: ["/opt/legacy/*"]
+
+# ---------------------------------------------------------------- 通知
+notify:
+  suppress_file: /etc/sbomops/accepted.tsv   # 期限付きの受容リスト
+  policy:
+    min_severity: HIGH          # CRITICAL / HIGH / MEDIUM / LOW
+    only_fixable: true          # 修正版があるものだけ
+    always_notify:              # 上の 2 条件に関係なく通知する
+      kev: true
+      epss_gte: 0.5
+    vendor_status_ignore: [will_not_fix, end_of_life]
+    repeat: until_fixed         # until_fixed: パッチ適用まで通知し続ける / once: 新規の時だけ
+    remind_every: 1d            # until_fixed の再通知間隔 (7d にすると週1で催促)
+    report_resolved: true       # 通知済みのものが解消したら報告
+    quiet_when_empty: true      # 何もない日は送らない
+    notify_reboot_required: true
+    notify_warnings: true
+    max_items: 30
+    group_by_package: true
+  slack:
+    enabled: true
+    webhook_env: SLACK_WEBHOOK_URL
+    mention: "<!here>"
+    mention_on: [kev, critical]   # kev / critical / new / any
+
+# ---------------------------------------------------------------- AI による評価 (任意)
+# 通知対象を Claude Code / Codex に評価させ、優先度 (P1-P4) と対処を通知に付ける。
+# CVE・パッケージ名・版・場所 (伏せ字処理後) が各社の API に送られる点に注意。
+assess:
+  enabled: false
+  engine: claude                # claude | codex | command
+  # model: claude-sonnet-5-5
+  run_as: null                  # root で動かす場合、CLI にログイン済みのユーザー名
+  max_per_run: 20
+  cache: 30d                    # 同じ検出は 30 日間再評価しない
+  include_host_context: false   # 稼働中の実行ファイルかどうかを含める
+  redact: {hostname: true, home_paths: true}
+  # engine: command の例 (stdin でプロンプト、stdout に JSON 配列):
+  # command: ["/usr/local/bin/my-llm", "--json"]
+
+retention:
+  results_days: 14
+  sbom_keep: 3
