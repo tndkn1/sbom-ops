@@ -34,8 +34,11 @@ fi
 echo "-- 本体を $PREFIX に配置"
 install -d -m 0755 "$PREFIX" "$PREFIX/bin"
 rm -rf "$PREFIX/sbomops.new"
-cp -a "$SRC/sbomops" "$PREFIX/sbomops.new"
+# root で動くコードなので、リポジトリの所有者・権限は引き継がず root 所有・他者書き込み不可にする
+cp -r --no-preserve=mode,ownership "$SRC/sbomops" "$PREFIX/sbomops.new"
 find "$PREFIX/sbomops.new" -name __pycache__ -prune -exec rm -rf {} +
+chown -R root:root "$PREFIX/sbomops.new"
+chmod -R u=rwX,go=rX "$PREFIX/sbomops.new"
 rm -rf "$PREFIX/sbomops" && mv "$PREFIX/sbomops.new" "$PREFIX/sbomops"
 install -m 0755 "$SRC/bin/sbomops" "$PREFIX/bin/sbomops"
 install -m 0644 "$SRC/README.md" "$PREFIX/README.md"
@@ -47,6 +50,11 @@ ln -sf "$PREFIX/bin/sbomops" /usr/local/bin/sbomops
 if (( tools )); then
   echo "-- syft / trivy"
   "$SRC/scripts/install-tools.sh" "$PREFIX/bin"
+fi
+
+# 一般ユーザーが書き換えられるファイルが残っていないか
+if bad=$(find "$PREFIX" \( ! -user root -o -perm /022 \) -print -quit) && [[ -n $bad ]]; then
+  echo "!! root 以外が書き換えられるファイルがある: $bad" >&2; exit 1
 fi
 
 echo "-- 設定 ($ETC)"
