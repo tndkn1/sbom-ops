@@ -47,6 +47,13 @@ sudo systemctl enable --now sbomops.timer   # 毎日 04:30
 | `/etc/sbomops/accepted.tsv` | 期限付きの受容リスト |
 | `/var/lib/sbomops/` | SBOM、照合結果、状態 DB (`state.db`)、ログ |
 
+ログ:
+
+- 実行ログ: journald (`journalctl -u sbomops.service`) と `/var/lib/sbomops/logs/run-<日付>.log`。
+  `retention.logs_days` (既定は `results_days` と同じ 14 日) より古いものは run の最後に消す
+- syft のログ: `/var/lib/sbomops/logs/syft/<単位>.log` (スキャンごとに上書き)
+- 実行履歴: `state.db` の `runs` テーブル (`sbomops status` で直近 5 回)
+
 ## 使い方
 
 ```sh

@@ -126,5 +126,6 @@ assess:
   # command: ["/usr/local/bin/my-llm", "--json"]
 
 retention:
-  results_days: 14
-  sbom_keep: 3
+  results_days: 14              # 照合結果 (results/<日付>/) を残す日数
+  logs_days: 14                 # 実行ログ (logs/run-<日付>.log) を残す日数 (省略時は results_days と同じ)
+  sbom_keep: 3                  # 単位ごとに残す SBOM の世代数

@@ -191,12 +191,27 @@ def send(cfg: dict, st: Store, rp: notify.Report, dry_run: bool) -> int:
     return errors
 
 
-def retention(cfg: dict) -> None:
-    days = int(cfg["retention"].get("results_days", 14))
-    limit = (dt.date.today() - dt.timedelta(days=days)).isoformat()
+def retention(cfg: dict, today: dt.date | None = None) -> None:
+    """古い照合結果 (results/<日付>/) と実行ログ (logs/run-<日付>.log) を消す"""
+    ret = cfg["retention"]
+    today = today or dt.date.today()
+    rdays = int(ret.get("results_days", 14))
+    ldays = int(ret.get("logs_days") or rdays)   # 未指定なら results_days と同じ
+    limit = (today - dt.timedelta(days=rdays)).isoformat()
     for d in glob.glob(os.path.join(cfg["data_dir"], "results", "????-??-??")):
         if os.path.basename(d) < limit:
             shutil.rmtree(d, ignore_errors=True)
+    limit = (today - dt.timedelta(days=ldays)).isoformat()
+    n = 0
+    for f in glob.glob(os.path.join(cfg["data_dir"], "logs", "run-????-??-??.log")):
+        if os.path.basename(f)[4:14] < limit:
+            try:
+                os.unlink(f)
+                n += 1
+            except OSError as e:
+                log.warning("ログを消せない: %s (%s)", f, e)
+    if n:
+        log.info("retention: %d 日より古い実行ログ %d 件を削除", ldays, n)
 
 
 def run(cfg: dict, *, only=None, force=False, no_scan=False, no_notify=False, dry_run=False,

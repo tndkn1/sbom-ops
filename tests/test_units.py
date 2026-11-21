@@ -166,6 +166,27 @@ class NormalizeTest(unittest.TestCase):
         self.assertEqual((deb["key"], deb["location"]), ("u|CVE-2|libc6|amd64", ""))
 
 
+class RetentionTest(unittest.TestCase):
+    def test_logs_and_results(self):
+        from sbomops import pipeline
+        with tempfile.TemporaryDirectory() as d:
+            today = dt.date(2026, 3, 31)
+            for day in ("2026-03-01", "2026-03-16", "2026-03-17", "2026-03-31"):
+                os.makedirs(os.path.join(d, "results", day))
+                os.makedirs(os.path.join(d, "logs"), exist_ok=True)
+                open(os.path.join(d, "logs", f"run-{day}.log"), "w").close()
+            open(os.path.join(d, "logs", "other.log"), "w").close()
+            cfg = {"data_dir": d, "retention": {"results_days": 14, "logs_days": None}}
+            pipeline.retention(cfg, today)
+            self.assertEqual(sorted(os.listdir(os.path.join(d, "logs"))),
+                             ["other.log", "run-2026-03-17.log", "run-2026-03-31.log"])
+            self.assertEqual(sorted(os.listdir(os.path.join(d, "results"))), ["2026-03-17", "2026-03-31"])
+            cfg["retention"]["logs_days"] = 30
+            open(os.path.join(d, "logs", "run-2026-03-01.log"), "w").close()
+            pipeline.retention(cfg, today)
+            self.assertIn("run-2026-03-01.log", os.listdir(os.path.join(d, "logs")))   # 30 日以内
+
+
 class SlackTest(unittest.TestCase):
     def test_render_limits(self):
         items = [(row(key=f"k{i}", vuln_id=f"CVE-{i}", pkg=f"p{i % 40}", location=f"/x/{i % 40}" * 20,

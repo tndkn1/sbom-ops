@@ -93,7 +93,7 @@ DEFAULTS = {
         "redact": {"hostname": True, "home_paths": True},
         "language": "ja",
     },
-    "retention": {"results_days": 14, "sbom_keep": 3},
+    "retention": {"results_days": 14, "logs_days": None, "sbom_keep": 3},   # logs_days 未指定 = results_days
 }
 
 TARGET_DEFAULTS = {
