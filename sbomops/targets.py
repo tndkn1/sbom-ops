@@ -1,6 +1,7 @@
 """スキャン対象の展開 (path_glob / running-images を具体的な単位に分ける) と実行周期の判定"""
 from __future__ import annotations
 
+import fnmatch
 import glob
 import os
 from dataclasses import dataclass, field
@@ -74,13 +75,16 @@ def expand(cfg: dict, with_images: bool = True) -> tuple[list[Unit], set[str]]:
                 paths += [t["path"]] if isinstance(t["path"], str) else list(t["path"])
             for g in ([t["path_glob"]] if isinstance(t.get("path_glob"), str) else t.get("path_glob") or []):
                 paths += sorted(p.rstrip("/") for p in glob.glob(g) if os.path.isdir(p))
+            skip = t.get("skip") or []
+            paths = [p for p in paths if not any(fnmatch.fnmatch(p, s) for s in skip)]
             multi = bool(t.get("path_glob")) or len(paths) > 1
             for p in paths:
                 if not os.path.isdir(p):
                     log.info("-- %s: %s がない (スキップ)", t["id"], p)
                     continue
                 uid = f"{t['id']}:{safe_name(p.strip('/'))}" if multi else t["id"]
-                ex = list(t["exclude"]) + ["./**/.git/**"]
+                # sbomops 自身のデータ (SBOM ファイル) を syft の sbom-cataloger が読まないように外す
+                ex = list(t["exclude"]) + ["./**/.git/**", cfg["data_dir"]]
                 if p.rstrip("/") in ("", "/"):
                     ex += SYSTEM_EXCLUDES
                 units.append(Unit(uid, t["id"], tp, f"dir:{p}", p, every, maxrt, mem,

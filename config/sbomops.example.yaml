@@ -26,6 +26,8 @@ run:
 #                   path_glob や複数 path は「1 ディレクトリ = 1 単位」に展開される
 #   image           コンテナイメージ (ref: nginx:1.27 / docker:myapp:latest / registry:...)
 #   running-images  稼働中コンテナのイメージ (docker / podman)。イメージ ID が変わったら作り直す
+# path_glob の展開から外すものは skip (glob のリスト)。SBOM ファイルを含むディレクトリは外すこと
+#   (syft は見つけた SBOM ファイルの中身もパッケージとして読む)
 # 共通: every (周期)、max_runtime (1 単位の上限時間)、mem_max、exclude、syft_args、enabled
 targets:
   - id: os
@@ -59,6 +61,7 @@ targets:
   # - id: projects
   #   type: dir
   #   path_glob: "/home/*/work/*"
+  #   skip: ["/home/*/work/old-*"]            # 展開から外すディレクトリ (glob)
   #   exclude: ["./**/node_modules/.cache/**", "./**/docker/volumes/**"]
   #   every: 7d
 
