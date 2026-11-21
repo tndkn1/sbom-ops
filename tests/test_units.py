@@ -138,6 +138,34 @@ class StoreTest(unittest.TestCase):
             st.close()
 
 
+class NormalizeTest(unittest.TestCase):
+    def test_same_purl_in_multiple_binaries(self):
+        """trivy が 1 件にまとめた同一 purl を、SBOM 上の全ての場所に展開する"""
+        import json
+        from sbomops import match
+        comp = lambda pid, path: {"bom-ref": f"pkg:golang/x@v1?package-id={pid}", "name": "x",
+                                  "purl": f"pkg:golang/x@v1?package-id={pid}",
+                                  "properties": [{"name": "syft:location:0:path", "value": path}]}
+        bom = {"components": [comp("a", "bin/one"), comp("b", "/bin/two"),
+                              {"bom-ref": "deb1", "purl": "pkg:deb/ubuntu/libc6@2.39?arch=amd64",
+                               "properties": [{"name": "syft:location:0:path", "value": "/var/lib/dpkg/status"}]}]}
+        tr = {"Results": [{"Type": "gobinary", "Vulnerabilities": [
+            {"VulnerabilityID": "CVE-1", "PkgName": "x", "InstalledVersion": "v1", "Severity": "HIGH",
+             "PkgIdentifier": {"PURL": "pkg:golang/x@v1", "BOMRef": "pkg:golang/x@v1?package-id=b"}}]},
+            {"Type": "ubuntu", "Vulnerabilities": [
+            {"VulnerabilityID": "CVE-2", "PkgName": "libc6", "InstalledVersion": "2.39", "Severity": "LOW",
+             "PkgIdentifier": {"PURL": "pkg:deb/ubuntu/libc6@2.39?arch=amd64", "BOMRef": "deb1"}}]}]}
+        with tempfile.TemporaryDirectory() as d:
+            sp, tp = os.path.join(d, "s.json"), os.path.join(d, "t.json")
+            json.dump(bom, open(sp, "w"))
+            json.dump(tr, open(tp, "w"))
+            recs = match.normalize("u", "/usr", tp, sp)
+        self.assertEqual(sorted(r["location"] for r in recs if r["vuln_id"] == "CVE-1"),
+                         ["/usr/bin/one", "/usr/bin/two"])
+        deb = [r for r in recs if r["vuln_id"] == "CVE-2"][0]
+        self.assertEqual((deb["key"], deb["location"]), ("u|CVE-2|libc6|amd64", ""))
+
+
 class SlackTest(unittest.TestCase):
     def test_render_limits(self):
         items = [(row(key=f"k{i}", vuln_id=f"CVE-{i}", pkg=f"p{i % 40}", location=f"/x/{i % 40}" * 20,

@@ -169,7 +169,7 @@ def send(cfg: dict, st: Store, rp: notify.Report, dry_run: bool) -> int:
     pol = cfg["notify"]["policy"]
     rp.items.sort(key=lambda x: policy.sort_key(x[0], rp.assess))
     rp.resolved.sort(key=lambda r: policy.sort_key(r))
-    if rp.empty() and pol.get("quiet_when_empty", True):
+    if rp.empty() and pol.get("quiet_when_empty", True) and not dry_run:
         log.info("通知対象なし (quiet_when_empty のため送信しない)")
         return 0
     ns = notify.build(cfg)

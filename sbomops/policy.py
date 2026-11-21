@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 from . import host
 from .config import SEVERITIES
+from .match import OS_PURL
 from .util import log, parse_duration, parse_iso
 
 SEV_RANK = {s: i for i, s in enumerate(SEVERITIES)}   # CRITICAL=0 が最も高い
@@ -65,7 +66,7 @@ class Classifier:
             return
         paths = [r["location"] for r in recs
                  if r["location"].startswith("/") and r["location"] not in self._owner
-                 and not r["purl"].startswith(("pkg:deb/", "pkg:rpm/", "pkg:apk/"))]
+                 and not r["purl"].startswith(OS_PURL)]
         if paths:
             self._owner.update(host.file_owners(paths))
             pk = [p for p in self._owner.values() if p and p not in self._vendor]
@@ -75,7 +76,7 @@ class Classifier:
         """active | noise:<理由> | suppressed:<理由>"""
         n = self.noise
         loc = r["location"] or ""
-        is_os_pkg = r["purl"].startswith(("pkg:deb/", "pkg:rpm/", "pkg:apk/"))
+        is_os_pkg = r["purl"].startswith(OS_PURL)
         if unit_type != "image":
             if n.get("old_kernels") and is_os_pkg and KERNEL_PKG.match(r["pkg"]):
                 m = KVER.search(r["pkg"]) or KVER.search(r["version"])

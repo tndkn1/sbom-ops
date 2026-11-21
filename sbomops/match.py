@@ -3,11 +3,15 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 
 from . import runner
 from .scan import find_tool
 from .util import log, parse_size, safe_name
+
+
+OS_PURL = ("pkg:deb/", "pkg:rpm/", "pkg:apk/", "pkg:alpm/", "pkg:ebuild/")
 
 
 def _base_args(cfg: dict, cache_dir: str) -> list[str]:
@@ -54,42 +58,70 @@ def match_unit(cfg: dict, unit_id: str, sbom_path: str, data_dir: str, day: str)
     return out
 
 
-def _locations(sbom_path: str) -> dict[str, str]:
-    """CycloneDX の bom-ref → syft が記録したファイルの場所"""
+def _purl_base(purl: str) -> str:
+    """package-id など syft 固有の修飾子を除いた purl"""
+    if "?" not in purl:
+        return purl
+    head, q = purl.split("?", 1)
+    keep = [x for x in q.split("&") if not x.startswith("package-id=")]
+    return head + ("?" + "&".join(keep) if keep else "")
+
+
+def _locations(sbom_path: str) -> tuple[dict[str, str], dict[str, list[str]]]:
+    """CycloneDX から (bom-ref → 場所, purl → 全ての場所) を作る。
+
+    同じ purl のコンポーネントが複数の場所にある場合 (同じ Go モジュールを含む複数のバイナリなど)、
+    trivy は 1 件にまとめて返し、どの bom-ref を使うかも一定しないため、purl から全ての場所を引けるようにする。
+    """
     with open(sbom_path, encoding="utf-8") as f:
         bom = json.load(f)
-    out = {}
+    by_ref: dict[str, str] = {}
+    by_purl: dict[str, set] = {}
     for c in bom.get("components") or []:
         locs = [p["value"] for p in c.get("properties") or []
                 if p.get("name", "").startswith("syft:location:") and p["name"].endswith(":path")]
-        if locs and c.get("bom-ref"):
-            out[c["bom-ref"]] = locs[0]
-    return out
+        if not locs:
+            continue
+        if c.get("bom-ref"):
+            by_ref[c["bom-ref"]] = locs[0]
+        if c.get("purl"):
+            by_purl.setdefault(_purl_base(c["purl"]), set()).add(locs[0])
+    return by_ref, {k: sorted(v) for k, v in by_purl.items()}
 
 
 def normalize(unit_id: str, unit_root: str, trivy_json: str, sbom_path: str) -> list[dict]:
     with open(trivy_json, encoding="utf-8") as f:
         data = json.load(f)
-    locs = _locations(sbom_path)
+    by_ref, by_purl = _locations(sbom_path)
     root = (unit_root or "").rstrip("/")
+
+    def absloc(loc: str) -> str:
+        # syft はスキャン起点からの相対パスを返す (先頭の / は付いたり付かなかったりする)
+        loc = "/" + loc.lstrip("/")
+        return loc if not root or loc.startswith(root + "/") else root + loc
+
     recs: dict[str, dict] = {}
     for res in data.get("Results") or []:
         for v in res.get("Vulnerabilities") or []:
             pid = v.get("PkgIdentifier") or {}
-            loc = locs.get(pid.get("BOMRef", ""), "")
-            if loc and root and not loc.startswith(root + "/"):
-                loc = root + ("" if loc.startswith("/") else "/") + loc
             pkg = v.get("PkgName", "")
-            key = "|".join([unit_id, v["VulnerabilityID"], pkg, loc])
-            sev = v.get("Severity", "UNKNOWN")
-            rec = {
-                "key": key, "unit": unit_id, "vuln_id": v["VulnerabilityID"], "pkg": pkg,
-                "pkg_type": res.get("Type", ""), "version": v.get("InstalledVersion", ""),
-                "fixed": v.get("FixedVersion") or "", "vstatus": v.get("Status", ""),
-                "severity": sev, "title": (v.get("Title") or "")[:200],
-                "url": v.get("PrimaryURL") or "", "location": loc, "purl": pid.get("PURL", ""),
-                "_aliases": [x for x in v.get("VendorIDs") or [] if x.startswith("CVE-")],
-            }
-            # 同じ key が複数回出る (同じバイナリ内に同じモジュールが複数) 場合は 1 件にまとめる
-            recs.setdefault(key, rec)
+            purl = pid.get("PURL", "")
+            if purl.startswith(OS_PURL):
+                # OS パッケージの場所は常にパッケージ DB なので、代わりにアーキテクチャで区別する
+                m = re.search(r"[?&]arch=([^&]+)", purl)
+                places = [("", m.group(1) if m else "")]
+            else:
+                locs = by_purl.get(_purl_base(purl)) or [by_ref.get(pid.get("BOMRef", ""), "")]
+                places = [(absloc(x), absloc(x)) if x else ("", "") for x in locs]
+            for loc, ident in places:
+                key = "|".join([unit_id, v["VulnerabilityID"], pkg, ident])
+                # 同じ key が重複する場合は 1 件にまとめる
+                recs.setdefault(key, {
+                    "key": key, "unit": unit_id, "vuln_id": v["VulnerabilityID"], "pkg": pkg,
+                    "pkg_type": res.get("Type", ""), "version": v.get("InstalledVersion", ""),
+                    "fixed": v.get("FixedVersion") or "", "vstatus": v.get("Status", ""),
+                    "severity": v.get("Severity", "UNKNOWN"), "title": (v.get("Title") or "")[:200],
+                    "url": v.get("PrimaryURL") or "", "location": loc, "purl": purl,
+                    "_aliases": [x for x in v.get("VendorIDs") or [] if x.startswith("CVE-")],
+                })
     return list(recs.values())

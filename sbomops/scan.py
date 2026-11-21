@@ -5,6 +5,7 @@ import glob
 import json
 import os
 import shutil
+import tempfile
 import time
 
 from . import runner
@@ -23,6 +24,35 @@ def find_tool(cfg: dict, name: str) -> str:
     if not w:
         raise FileNotFoundError(f"{name} が見つかりません (scripts/install-tools.sh で入れるか tools.{name} を設定)")
     return w
+
+
+# OS のパッケージ DB と、ディストリ判定に使うファイル (syft の os タグの cataloger が読むもの)
+OS_DB_PATHS = [
+    "etc/os-release", "usr/lib/os-release", "etc/system-release", "etc/redhat-release",
+    "etc/debian_version", "etc/alpine-release", "etc/lsb-release",
+    "var/lib/dpkg/status", "var/lib/dpkg/status.d",
+    "var/lib/rpm", "usr/lib/sysimage/rpm", "usr/share/rpm",
+    "lib/apk/db/installed", "var/lib/pacman/local", "var/db/pkg",
+]
+
+
+def snapshot_os_db(root: str, dest: str) -> int:
+    """root のパッケージ DB を dest に写す。写したパスの数を返す"""
+    n = 0
+    for rel in OS_DB_PATHS:
+        src = os.path.join(root, rel)
+        dst = os.path.join(dest, rel)
+        if os.path.islink(src):
+            src = os.path.realpath(src)
+        if os.path.isdir(src):
+            shutil.copytree(src, dst, symlinks=False, ignore_dangling_symlinks=True,
+                            ignore=shutil.ignore_patterns("__db.*", "*.lock", ".dbenv.lock"))
+            n += 1
+        elif os.path.isfile(src):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(src, dst)
+            n += 1
+    return n
 
 
 def scan_unit(cfg: dict, u: Unit, data_dir: str) -> tuple[str, runner.Result]:
@@ -50,7 +80,19 @@ def scan_unit(cfg: dict, u: Unit, data_dir: str) -> tuple[str, runner.Result]:
     cmd = [syft, "scan", "-q", u.source, *u.syft_args, "--source-name", name,
            "-o", f"cyclonedx-json={tmp}"]
     log.info("scan %s (%s)", u.id, u.source)
-    r = runner.run(cmd, cfg["resources"], mem_max=u.mem_max, timeout=u.max_runtime, env=env, log_path=logp)
+    snap = None
+    if u.type == "os-packages":
+        snap = tempfile.mkdtemp(prefix="osdb-", dir=data_dir)
+        if not snapshot_os_db(u.root, snap):
+            shutil.rmtree(snap, ignore_errors=True)
+            raise RuntimeError(f"{u.root} にパッケージ DB が見つからない")
+        cmd[cmd.index(u.source)] = f"dir:{snap}"
+    try:
+        r = runner.run(cmd, cfg["resources"], mem_max=u.mem_max, timeout=u.max_runtime, env=env,
+                       log_path=logp)
+    finally:
+        if snap:
+            shutil.rmtree(snap, ignore_errors=True)
     if r.rc != 0 or r.killed or not os.path.exists(tmp):
         if os.path.exists(tmp):
             os.unlink(tmp)

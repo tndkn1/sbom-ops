@@ -62,14 +62,12 @@ def expand(cfg: dict, with_images: bool = True) -> tuple[list[Unit], set[str]]:
         args = list(t.get("syft_args") or [])
         tp = t["type"]
         if tp == "os-packages":
+            # パッケージ DB と os-release だけを一時ディレクトリに写してから読む (scan.py)。
+            # dir:/ を歩くとデータ領域の大きいホストで遅くなるため
             root = t.get("path") or "/"
-            ex = _excludes(root, SYSTEM_EXCLUDES + ["/home", "/root", "/opt", "/srv", "/usr/local",
-                                                    "/usr/share", "/usr/src", "/usr/include", "/boot"]
-                           + list(t["exclude"]))
-            # OS のパッケージ DB を読む cataloger だけを使う (apt/dnf/apk/pacman などに共通の os タグ)
-            a = ["--override-default-catalogers", "os", "--select-catalogers", "-rpm-archive-cataloger"]
-            units.append(Unit(t["id"], t["id"], tp, f"dir:{root}", root, every, maxrt, mem,
-                              a + _flag_ex(ex) + args))
+            a = ["--override-default-catalogers", "os",
+                 "--select-catalogers", "-rpm-archive-cataloger,-deb-archive-cataloger"]
+            units.append(Unit(t["id"], t["id"], tp, f"dir:{root}", root, every, maxrt, mem, a + args))
         elif tp == "dir":
             paths = []
             if t.get("path"):
