@@ -1,0 +1,218 @@
+{
+  "_doc": "trivy が 1 件にまとめた同一 purl を SBOM 上の全ての場所に展開する / OS パッケージは arch で区別する / 重複 key は 1 件",
+  "unit": "u",
+  "root": "/usr",
+  "sbom": {
+    "components": [
+      {
+        "bom-ref": "pkg:golang/x@v1?package-id=a",
+        "name": "x",
+        "purl": "pkg:golang/x@v1?package-id=a",
+        "properties": [
+          {
+            "name": "syft:location:0:path",
+            "value": "bin/one"
+          }
+        ]
+      },
+      {
+        "bom-ref": "pkg:golang/x@v1?package-id=b",
+        "name": "x",
+        "purl": "pkg:golang/x@v1?package-id=b",
+        "properties": [
+          {
+            "name": "syft:location:0:path",
+            "value": "/bin/two"
+          }
+        ]
+      },
+      {
+        "bom-ref": "pkg:golang/x@v1?package-id=c&foo=1",
+        "name": "x",
+        "purl": "pkg:golang/x@v1?package-id=c&foo=1",
+        "properties": [
+          {
+            "name": "syft:location:0:path",
+            "value": "/usr/lib/three"
+          }
+        ]
+      },
+      {
+        "bom-ref": "deb1",
+        "purl": "pkg:deb/ubuntu/libc6@2.39?arch=amd64",
+        "properties": [
+          {
+            "name": "syft:location:0:path",
+            "value": "/var/lib/dpkg/status"
+          }
+        ]
+      },
+      {
+        "bom-ref": "noloc",
+        "purl": "pkg:npm/y@1"
+      }
+    ]
+  },
+  "trivy": {
+    "Results": [
+      {
+        "Type": "gobinary",
+        "Vulnerabilities": [
+          {
+            "VulnerabilityID": "CVE-1",
+            "PkgName": "x",
+            "InstalledVersion": "v1",
+            "Severity": "HIGH",
+            "FixedVersion": "v2",
+            "Status": "fixed",
+            "Title": "t",
+            "PrimaryURL": "https://example/CVE-1",
+            "VendorIDs": [
+              "GHSA-1",
+              "CVE-1b"
+            ],
+            "PkgIdentifier": {
+              "PURL": "pkg:golang/x@v1",
+              "BOMRef": "pkg:golang/x@v1?package-id=b"
+            }
+          },
+          {
+            "VulnerabilityID": "CVE-3",
+            "PkgName": "x",
+            "InstalledVersion": "v1",
+            "PkgIdentifier": {
+              "PURL": "pkg:golang/x@v1?foo=1",
+              "BOMRef": ""
+            }
+          }
+        ]
+      },
+      {
+        "Type": "ubuntu",
+        "Vulnerabilities": [
+          {
+            "VulnerabilityID": "CVE-2",
+            "PkgName": "libc6",
+            "InstalledVersion": "2.39",
+            "Severity": "LOW",
+            "PkgIdentifier": {
+              "PURL": "pkg:deb/ubuntu/libc6@2.39?arch=amd64",
+              "BOMRef": "deb1"
+            }
+          },
+          {
+            "VulnerabilityID": "CVE-2",
+            "PkgName": "libc6",
+            "InstalledVersion": "2.39",
+            "Severity": "LOW",
+            "PkgIdentifier": {
+              "PURL": "pkg:deb/ubuntu/libc6@2.39?arch=amd64",
+              "BOMRef": "deb1"
+            }
+          }
+        ]
+      },
+      {
+        "Type": "node-pkg",
+        "Vulnerabilities": [
+          {
+            "VulnerabilityID": "CVE-4",
+            "PkgName": "y",
+            "InstalledVersion": "1",
+            "Severity": "MEDIUM",
+            "PkgIdentifier": {
+              "PURL": "pkg:npm/y@1",
+              "BOMRef": "noloc"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "want": [
+    {
+      "key": "u|CVE-1|x|/usr/bin/one",
+      "unit": "u",
+      "vuln_id": "CVE-1",
+      "pkg": "x",
+      "pkg_type": "gobinary",
+      "version": "v1",
+      "fixed": "v2",
+      "vstatus": "fixed",
+      "severity": "HIGH",
+      "title": "t",
+      "url": "https://example/CVE-1",
+      "location": "/usr/bin/one",
+      "purl": "pkg:golang/x@v1",
+      "_aliases": [
+        "CVE-1b"
+      ]
+    },
+    {
+      "key": "u|CVE-1|x|/usr/bin/two",
+      "unit": "u",
+      "vuln_id": "CVE-1",
+      "pkg": "x",
+      "pkg_type": "gobinary",
+      "version": "v1",
+      "fixed": "v2",
+      "vstatus": "fixed",
+      "severity": "HIGH",
+      "title": "t",
+      "url": "https://example/CVE-1",
+      "location": "/usr/bin/two",
+      "purl": "pkg:golang/x@v1",
+      "_aliases": [
+        "CVE-1b"
+      ]
+    },
+    {
+      "key": "u|CVE-2|libc6|amd64",
+      "unit": "u",
+      "vuln_id": "CVE-2",
+      "pkg": "libc6",
+      "pkg_type": "ubuntu",
+      "version": "2.39",
+      "fixed": "",
+      "vstatus": "",
+      "severity": "LOW",
+      "title": "",
+      "url": "",
+      "location": "",
+      "purl": "pkg:deb/ubuntu/libc6@2.39?arch=amd64",
+      "_aliases": []
+    },
+    {
+      "key": "u|CVE-3|x|/usr/lib/three",
+      "unit": "u",
+      "vuln_id": "CVE-3",
+      "pkg": "x",
+      "pkg_type": "gobinary",
+      "version": "v1",
+      "fixed": "",
+      "vstatus": "",
+      "severity": "UNKNOWN",
+      "title": "",
+      "url": "",
+      "location": "/usr/lib/three",
+      "purl": "pkg:golang/x@v1?foo=1",
+      "_aliases": []
+    },
+    {
+      "key": "u|CVE-4|y|",
+      "unit": "u",
+      "vuln_id": "CVE-4",
+      "pkg": "y",
+      "pkg_type": "node-pkg",
+      "version": "1",
+      "fixed": "",
+      "vstatus": "",
+      "severity": "MEDIUM",
+      "title": "",
+      "url": "",
+      "location": "",
+      "purl": "pkg:npm/y@1",
+      "_aliases": []
+    }
+  ]
+}

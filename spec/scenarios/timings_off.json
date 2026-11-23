@@ -1,0 +1,9 @@
+{
+  "_doc": "report_timings / report_skipped を false にすると載せない",
+  "policy": {"report_timings": false, "report_skipped": false},
+  "config": {"targets": [{"id": "app", "type": "dir", "path": "{dir}/app"}, {"id": "off", "type": "dir", "path": "/x", "enabled": false}]},
+  "steps": [
+    {"set_version": "1.0"},
+    {"run": {}, "expect": {"sent": true, "timings": [], "skipped_exact": []}}
+  ]
+}

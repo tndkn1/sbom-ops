@@ -1,0 +1,109 @@
+{
+  "_doc": "ジョブ自体の失敗 (途中までの調査時間つき)。mention_on に関係なくメンションする",
+  "slack": {
+    "mention": "<@U123>",
+    "mention_on": [
+      "kev"
+    ]
+  },
+  "base_row": {
+    "key": "",
+    "unit": "os",
+    "vuln_id": "CVE-0",
+    "pkg": "p",
+    "pkg_type": "ubuntu",
+    "version": "1.0",
+    "fixed": "1.1",
+    "vstatus": "fixed",
+    "severity": "HIGH",
+    "title": "",
+    "url": "",
+    "location": "",
+    "purl": "pkg:deb/ubuntu/p@1.0",
+    "kev": 0,
+    "epss": null,
+    "class": "active",
+    "eligible": 1,
+    "state": "open",
+    "first_seen": "2026-11-01",
+    "last_seen": "2026-11-24",
+    "resolved_at": null,
+    "last_notified": null
+  },
+  "report": {
+    "host": "db-01",
+    "date": "2026-11-24",
+    "failed": "スキャン対象がない (targets を設定してください)",
+    "warnings": [
+      "OS の変更を検知 (ubuntu-24.04 → ubuntu-26.04)。全対象の SBOM を作り直した"
+    ],
+    "timings": [
+      {
+        "unit": "os",
+        "syft": {
+          "start": 1795489205,
+          "end": 1795489206,
+          "sec": 1.0,
+          "ok": true
+        },
+        "trivy": null,
+        "syft_skip": null
+      }
+    ],
+    "skipped": [
+      [
+        "containers",
+        "docker / podman が使えない"
+      ]
+    ]
+  },
+  "want": {
+    "text": "SBOM db-01 2026-11-24: :x: ジョブ失敗: スキャン対象がない (targets を設定してください)",
+    "blocks": [
+      {
+        "type": "header",
+        "text": {
+          "type": "plain_text",
+          "text": "SBOM db-01 2026-11-24"
+        }
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": "<@U123> :x: ジョブ失敗: スキャン対象がない (targets を設定してください)"
+        }
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*調査対象外*\n:no_entry_sign: `containers` docker / podman が使えない\n"
+        }
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": ":warning: OS の変更を検知 (ubuntu-24.04 → ubuntu-26.04)。全対象の SBOM を作り直した\n"
+        }
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*調査時間* (開始〜終了)\n`os`  syft 03:00:05〜03:00:06 (1s) / trivy 未実行\n"
+        }
+      }
+    ]
+  }
+}

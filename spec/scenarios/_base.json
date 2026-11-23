@@ -1,0 +1,12 @@
+{
+  "data_dir": "{dir}/data",
+  "secrets_file": "",
+  "tools": {"syft": "{fake}/syft", "trivy": "{fake}/trivy"},
+  "resources": {"nice": 0, "ionice_class": "none"},
+  "enrich": {"kev": false, "epss": false},
+  "noise": {"distro_owned": false},
+  "notify": {"suppress_file": "{dir}/accepted.tsv",
+             "policy": {"notify_reboot_required": false},
+             "slack": {"enabled": true}},
+  "targets": [{"id": "app", "type": "dir", "path": "{dir}/app", "every": "1d"}]
+}

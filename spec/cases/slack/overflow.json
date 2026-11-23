@@ -1,0 +1,168 @@
+{
+  "_doc": "max_items 超過・group_by_package なし・本文の分割 (3000 文字)・解消 15 件超・メンションなし",
+  "slack": {
+    "mention": "",
+    "mention_on": [
+      "any"
+    ]
+  },
+  "policy": {
+    "max_items": 40,
+    "group_by_package": false
+  },
+  "base_row": {
+    "key": "",
+    "unit": "os",
+    "vuln_id": "CVE-0",
+    "pkg": "p",
+    "pkg_type": "ubuntu",
+    "version": "1.0",
+    "fixed": "1.1",
+    "vstatus": "fixed",
+    "severity": "HIGH",
+    "title": "",
+    "url": "",
+    "location": "",
+    "purl": "pkg:deb/ubuntu/p@1.0",
+    "kev": 0,
+    "epss": null,
+    "class": "active",
+    "eligible": 1,
+    "state": "open",
+    "first_seen": "2026-11-01",
+    "last_seen": "2026-11-24",
+    "resolved_at": null,
+    "last_notified": null
+  },
+  "report": {
+    "host": "h",
+    "date": "2026-11-24",
+    "repeat_items": {
+      "count": 60,
+      "kind": "remind",
+      "row": {
+        "key": "k{i}",
+        "vuln_id": "CVE-2026-{i}",
+        "pkg": "pkg-{i%7}",
+        "location": "/very/long/path/to/some/vendored/library/directory/number/{i}/package.json",
+        "unit": "app:{i%7}"
+      }
+    },
+    "resolved": [
+      {
+        "vuln_id": "CVE-1"
+      },
+      {
+        "vuln_id": "CVE-2"
+      },
+      {
+        "vuln_id": "CVE-3"
+      },
+      {
+        "vuln_id": "CVE-4"
+      },
+      {
+        "vuln_id": "CVE-5"
+      },
+      {
+        "vuln_id": "CVE-6"
+      },
+      {
+        "vuln_id": "CVE-7"
+      },
+      {
+        "vuln_id": "CVE-8"
+      },
+      {
+        "vuln_id": "CVE-9"
+      },
+      {
+        "vuln_id": "CVE-10"
+      },
+      {
+        "vuln_id": "CVE-11"
+      },
+      {
+        "vuln_id": "CVE-12"
+      },
+      {
+        "vuln_id": "CVE-13"
+      },
+      {
+        "vuln_id": "CVE-14"
+      },
+      {
+        "vuln_id": "CVE-15"
+      },
+      {
+        "vuln_id": "CVE-16"
+      },
+      {
+        "vuln_id": "CVE-17"
+      }
+    ],
+    "open_counts": {
+      "UNKNOWN": 3,
+      "MEDIUM": 60
+    }
+  },
+  "want": {
+    "text": "SBOM h 2026-11-24: 通知 60 件 (新規 0 / 継続 60) / 解消 17 件",
+    "blocks": [
+      {
+        "type": "header",
+        "text": {
+          "type": "plain_text",
+          "text": "SBOM h 2026-11-24"
+        }
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": "通知 60 件 (新規 0 / 継続 60) / 解消 17 件"
+        }
+      },
+      {
+        "type": "context",
+        "elements": [
+          {
+            "type": "mrkdwn",
+            "text": "未解消 (通知条件内): MEDIUM 60 / UNKNOWN 3"
+          }
+        ]
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": ":large_orange_circle: *CVE-2026-0* `pkg-0` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:0_ `/very/long/path/to/some/vendored/library/directory/number/0/package.json`\n:large_orange_circle: *CVE-2026-1* `pkg-1` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:1_ `/very/long/path/to/some/vendored/library/directory/number/1/package.json`\n:large_orange_circle: *CVE-2026-2* `pkg-2` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:2_ `/very/long/path/to/some/vendored/library/directory/number/2/package.json`\n:large_orange_circle: *CVE-2026-3* `pkg-3` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:3_ `/very/long/path/to/some/vendored/library/directory/number/3/package.json`\n:large_orange_circle: *CVE-2026-4* `pkg-4` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:4_ `/very/long/path/to/some/vendored/library/directory/number/4/package.json`\n:large_orange_circle: *CVE-2026-5* `pkg-5` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:5_ `/very/long/path/to/some/vendored/library/directory/number/5/package.json`\n:large_orange_circle: *CVE-2026-6* `pkg-6` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:6_ `/very/long/path/to/some/vendored/library/directory/number/6/package.json`\n:large_orange_circle: *CVE-2026-7* `pkg-0` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:0_ `/very/long/path/to/some/vendored/library/directory/number/7/package.json`\n:large_orange_circle: *CVE-2026-8* `pkg-1` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:1_ `/very/long/path/to/some/vendored/library/directory/number/8/package.json`\n:large_orange_circle: *CVE-2026-9* `pkg-2` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:2_ `/very/long/path/to/some/vendored/library/directory/number/9/package.json`\n:large_orange_circle: *CVE-2026-10* `pkg-3` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:3_ `/very/long/path/to/some/vendored/library/directory/number/10/package.json`\n:large_orange_circle: *CVE-2026-11* `pkg-4` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:4_ `/very/long/path/to/some/vendored/library/directory/number/11/package.json`\n:large_orange_circle: *CVE-2026-12* `pkg-5` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:5_ `/very/long/path/to/some/vendored/library/directory/number/12/package.json`\n:large_orange_circle: *CVE-2026-13* `pkg-6` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:6_ `/very/long/path/to/some/vendored/library/directory/number/13/package.json`\n:large_orange_circle: *CVE-2026-14* `pkg-0` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:0_ `/very/long/path/to/some/vendored/library/directory/number/14/package.json`\n:large_orange_circle: *CVE-2026-15* `pkg-1` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:1_ `/very/long/path/to/some/vendored/library/directory/number/15/package.json`\n:large_orange_circle: *CVE-2026-16* `pkg-2` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:2_ `/very/long/path/to/some/vendored/library/directory/number/16/package.json`\n:large_orange_circle: *CVE-2026-17* `pkg-3` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:3_ `/very/long/path/to/some/vendored/library/directory/number/17/package.json`\n"
+        }
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": ":large_orange_circle: *CVE-2026-18* `pkg-4` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:4_ `/very/long/path/to/some/vendored/library/directory/number/18/package.json`\n:large_orange_circle: *CVE-2026-19* `pkg-5` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:5_ `/very/long/path/to/some/vendored/library/directory/number/19/package.json`\n:large_orange_circle: *CVE-2026-20* `pkg-6` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:6_ `/very/long/path/to/some/vendored/library/directory/number/20/package.json`\n:large_orange_circle: *CVE-2026-21* `pkg-0` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:0_ `/very/long/path/to/some/vendored/library/directory/number/21/package.json`\n:large_orange_circle: *CVE-2026-22* `pkg-1` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:1_ `/very/long/path/to/some/vendored/library/directory/number/22/package.json`\n:large_orange_circle: *CVE-2026-23* `pkg-2` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:2_ `/very/long/path/to/some/vendored/library/directory/number/23/package.json`\n:large_orange_circle: *CVE-2026-24* `pkg-3` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:3_ `/very/long/path/to/some/vendored/library/directory/number/24/package.json`\n:large_orange_circle: *CVE-2026-25* `pkg-4` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:4_ `/very/long/path/to/some/vendored/library/directory/number/25/package.json`\n:large_orange_circle: *CVE-2026-26* `pkg-5` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:5_ `/very/long/path/to/some/vendored/library/directory/number/26/package.json`\n:large_orange_circle: *CVE-2026-27* `pkg-6` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:6_ `/very/long/path/to/some/vendored/library/directory/number/27/package.json`\n:large_orange_circle: *CVE-2026-28* `pkg-0` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:0_ `/very/long/path/to/some/vendored/library/directory/number/28/package.json`\n:large_orange_circle: *CVE-2026-29* `pkg-1` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:1_ `/very/long/path/to/some/vendored/library/directory/number/29/package.json`\n:large_orange_circle: *CVE-2026-30* `pkg-2` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:2_ `/very/long/path/to/some/vendored/library/directory/number/30/package.json`\n:large_orange_circle: *CVE-2026-31* `pkg-3` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:3_ `/very/long/path/to/some/vendored/library/directory/number/31/package.json`\n:large_orange_circle: *CVE-2026-32* `pkg-4` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:4_ `/very/long/path/to/some/vendored/library/directory/number/32/package.json`\n:large_orange_circle: *CVE-2026-33* `pkg-5` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:5_ `/very/long/path/to/some/vendored/library/directory/number/33/package.json`\n:large_orange_circle: *CVE-2026-34* `pkg-6` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:6_ `/very/long/path/to/some/vendored/library/directory/number/34/package.json`\n:large_orange_circle: *CVE-2026-35* `pkg-0` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:0_ `/very/long/path/to/some/vendored/library/directory/number/35/package.json`\n"
+        }
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": ":large_orange_circle: *CVE-2026-36* `pkg-1` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:1_ `/very/long/path/to/some/vendored/library/directory/number/36/package.json`\n:large_orange_circle: *CVE-2026-37* `pkg-2` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:2_ `/very/long/path/to/some/vendored/library/directory/number/37/package.json`\n:large_orange_circle: *CVE-2026-38* `pkg-3` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:3_ `/very/long/path/to/some/vendored/library/directory/number/38/package.json`\n:large_orange_circle: *CVE-2026-39* `pkg-4` 1.0 → 1.1  未対応 2026-11-01〜\n      _app:4_ `/very/long/path/to/some/vendored/library/directory/number/39/package.json`\n…ほか 20 件 (`sbomops findings` で一覧)\n"
+        }
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*解消 (パッチ適用済み・削除済み)*\n:white_check_mark: CVE-1 `p` _os_\n:white_check_mark: CVE-2 `p` _os_\n:white_check_mark: CVE-3 `p` _os_\n:white_check_mark: CVE-4 `p` _os_\n:white_check_mark: CVE-5 `p` _os_\n:white_check_mark: CVE-6 `p` _os_\n:white_check_mark: CVE-7 `p` _os_\n:white_check_mark: CVE-8 `p` _os_\n:white_check_mark: CVE-9 `p` _os_\n:white_check_mark: CVE-10 `p` _os_\n:white_check_mark: CVE-11 `p` _os_\n:white_check_mark: CVE-12 `p` _os_\n:white_check_mark: CVE-13 `p` _os_\n:white_check_mark: CVE-14 `p` _os_\n:white_check_mark: CVE-15 `p` _os_\n…ほか 2 件\n"
+        }
+      }
+    ]
+  }
+}

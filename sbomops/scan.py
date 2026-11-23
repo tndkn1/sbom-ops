@@ -97,7 +97,7 @@ def scan_unit(cfg: dict, u: Unit, data_dir: str) -> tuple[str, runner.Result]:
         if os.path.exists(tmp):
             os.unlink(tmp)
         why = r.killed or f"rc={r.rc}"
-        raise RuntimeError(f"syft 失敗 ({why}): {r.stderr_tail.strip().splitlines()[-1:] or ''}")
+        raise RuntimeError(f"syft 失敗 ({why}): {(r.stderr_tail.strip().splitlines() or [''])[-1]}")
     with open(tmp, encoding="utf-8") as f:
         n = len(json.load(f).get("components") or [])
     os.chmod(tmp, 0o600)

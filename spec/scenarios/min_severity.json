@@ -1,0 +1,8 @@
+{
+  "_doc": "min_severity と only_fixable",
+  "policy": {"min_severity": "LOW", "only_fixable": false},
+  "steps": [
+    {"set_version": "1.0"},
+    {"run": {}, "expect": {"sent": true, "items": [["CVE-2099-0001", "new"], ["CVE-2099-0002", "new"]]}}
+  ]
+}

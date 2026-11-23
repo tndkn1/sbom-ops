@@ -1,0 +1,17 @@
+{
+  "_doc": "パッチ適用まで毎日再通知し、適用したら解消として報告して以後は送らない",
+  "policy": {"repeat": "until_fixed", "remind_every": "1d"},
+  "steps": [
+    {"set_version": "1.0"},
+    {"run": {}, "expect": {"rc": 0, "sent": true, "items": [["CVE-2099-0001", "new"]], "resolved": [],
+                           "timings": [{"unit": "app", "syft": "ok", "trivy": "ok"}]}},
+    {"run": {"force": true}, "expect": {"rc": 0, "sent": false}},
+    {"age_notifications": 1},
+    {"run": {"force": true}, "expect": {"rc": 0, "sent": true, "items": [["CVE-2099-0001", "remind"]]}},
+    {"set_version": "1.1"},
+    {"age_notifications": 1},
+    {"run": {"force": true}, "expect": {"rc": 0, "sent": true, "items": [], "resolved": ["CVE-2099-0001"]}},
+    {"age_notifications": 1},
+    {"run": {"force": true}, "expect": {"rc": 0, "sent": false}}
+  ]
+}

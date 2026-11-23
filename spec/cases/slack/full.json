@@ -1,0 +1,325 @@
+{
+  "_doc": "新規・継続・KEV・EPSS・グループ化・AI 評価・解消・再起動・警告・調査時間・調査対象外をひと通り含む",
+  "base_row": {
+    "key": "",
+    "unit": "os",
+    "vuln_id": "CVE-0",
+    "pkg": "p",
+    "pkg_type": "ubuntu",
+    "version": "1.0",
+    "fixed": "1.1",
+    "vstatus": "fixed",
+    "severity": "HIGH",
+    "title": "",
+    "url": "",
+    "location": "",
+    "purl": "pkg:deb/ubuntu/p@1.0",
+    "kev": 0,
+    "epss": null,
+    "class": "active",
+    "eligible": 1,
+    "state": "open",
+    "first_seen": "2026-11-01",
+    "last_seen": "2026-11-24",
+    "resolved_at": null,
+    "last_notified": null
+  },
+  "report": {
+    "host": "web-01",
+    "date": "2026-11-24",
+    "items": [
+      {
+        "row": {
+          "key": "k1",
+          "vuln_id": "CVE-2026-1000",
+          "pkg": "openssl",
+          "version": "3.0.13",
+          "fixed": "3.0.14",
+          "severity": "CRITICAL",
+          "url": "https://avd.aquasec.com/nvd/cve-2026-1000",
+          "kev": 1,
+          "epss": 0.973
+        },
+        "kind": "new"
+      },
+      {
+        "row": {
+          "key": "k2",
+          "unit": "proj:home-a-app",
+          "vuln_id": "CVE-2026-2001",
+          "pkg": "lodash",
+          "pkg_type": "node-pkg",
+          "version": "4.17.20",
+          "fixed": "4.17.21",
+          "location": "/home/a/app/node_modules/lodash/package.json",
+          "epss": 0.004
+        },
+        "kind": "remind"
+      },
+      {
+        "row": {
+          "key": "k3",
+          "unit": "proj:home-a-app",
+          "vuln_id": "CVE-2026-2002",
+          "pkg": "lodash",
+          "pkg_type": "node-pkg",
+          "version": "4.17.20",
+          "fixed": "4.17.12, 4.17.21",
+          "severity": "CRITICAL",
+          "location": "/home/a/app/node_modules/lodash/package.json",
+          "epss": 0.02,
+          "first_seen": "2026-10-01"
+        },
+        "kind": "remind"
+      },
+      {
+        "row": {
+          "key": "k4",
+          "unit": "proj:home-a-app",
+          "vuln_id": "CVE-2026-2003",
+          "pkg": "lodash",
+          "pkg_type": "node-pkg",
+          "version": "4.17.20",
+          "fixed": "4.17.9",
+          "location": "/home/a/app/node_modules/lodash/package.json"
+        },
+        "kind": "new"
+      },
+      {
+        "row": {
+          "key": "k5",
+          "unit": "proj:home-a-app",
+          "vuln_id": "GHSA-xxxx",
+          "pkg": "lodash",
+          "pkg_type": "node-pkg",
+          "version": "4.17.20",
+          "fixed": "",
+          "severity": "MEDIUM",
+          "location": "/home/a/app/node_modules/lodash/package.json"
+        },
+        "kind": "remind"
+      },
+      {
+        "row": {
+          "key": "k6",
+          "unit": "proj:home-a-app",
+          "vuln_id": "CVE-2026-2005",
+          "pkg": "lodash",
+          "pkg_type": "node-pkg",
+          "version": "4.17.20",
+          "fixed": "4.17.10-rc1",
+          "location": "/home/a/app/node_modules/lodash/package.json"
+        },
+        "kind": "remind"
+      },
+      {
+        "row": {
+          "key": "k7",
+          "unit": "sysbin",
+          "vuln_id": "CVE-2026-3000",
+          "pkg": "golang.org/x/net",
+          "pkg_type": "gobinary",
+          "version": "v0.1.0",
+          "fixed": "",
+          "severity": "LOW",
+          "location": "/usr/bin/<tool>&x",
+          "epss": 0.6
+        },
+        "kind": "new"
+      },
+      {
+        "row": {
+          "key": "k8",
+          "vuln_id": "CVE-2026-4000",
+          "pkg": "a<b>&c",
+          "version": "2",
+          "fixed": "3"
+        },
+        "kind": "new"
+      }
+    ],
+    "resolved": [
+      {
+        "key": "r1",
+        "vuln_id": "CVE-2026-0999",
+        "pkg": "zlib1g"
+      },
+      {
+        "key": "r2",
+        "unit": "proj:x",
+        "vuln_id": "CVE-2026-0998",
+        "pkg": "<p>"
+      }
+    ],
+    "warnings": [
+      "スキャン失敗: opt: syft 失敗 (timeout)",
+      "trivy DB が古い (2026-11-01T00:00:00Z)"
+    ],
+    "reboot": "reboot-required (libc6, linux-image-7.0.0-45-generic)",
+    "open_counts": {
+      "HIGH": 12,
+      "CRITICAL": 2,
+      "LOW": 1
+    },
+    "assess": {
+      "k1": {
+        "key": "k1",
+        "ts": "2026-11-24T00:00:00+00:00",
+        "engine": "claude",
+        "priority": "P1",
+        "exploitable": "yes",
+        "rationale": "外部公開の nginx が利用している。KEV 掲載で悪用が確認済み。<すぐ更新>",
+        "action": "apt upgrade openssl"
+      },
+      "k3": {
+        "key": "k3",
+        "ts": "2026-11-24T00:00:00+00:00",
+        "engine": "claude",
+        "priority": null,
+        "exploitable": "unknown",
+        "rationale": null,
+        "action": ""
+      }
+    },
+    "timings": [
+      {
+        "unit": "os",
+        "syft": {
+          "start": 1795489205,
+          "end": 1795489219,
+          "sec": 14.2,
+          "ok": true
+        },
+        "trivy": {
+          "start": 1795490105,
+          "end": 1795490111,
+          "sec": 6.0,
+          "ok": true
+        },
+        "syft_skip": null
+      },
+      {
+        "unit": "usr-local",
+        "syft": null,
+        "syft_skip": "周期内 (前回 11/20)",
+        "trivy": {
+          "start": 1795490111,
+          "end": 1795490114,
+          "sec": 3.0,
+          "ok": true
+        }
+      },
+      {
+        "unit": "opt",
+        "syft": {
+          "start": 1795489219,
+          "end": 1795496419,
+          "sec": 7200.0,
+          "ok": false
+        },
+        "trivy": null,
+        "syft_skip": null
+      },
+      {
+        "unit": "proj:home-a-app",
+        "syft": null,
+        "syft_skip": "時間切れで次回",
+        "trivy": {
+          "start": 1795490114,
+          "end": 1795490300,
+          "sec": 186.0,
+          "ok": false
+        }
+      }
+    ],
+    "skipped": [
+      [
+        "off",
+        "無効 (enabled: false)"
+      ],
+      [
+        "proj: /home/a/work/sbom-ops",
+        "skip に一致"
+      ],
+      [
+        "venv: /smb/share/.venv",
+        "パスがない"
+      ]
+    ]
+  },
+  "want": {
+    "text": "SBOM web-01 2026-11-24: 通知 8 件 (新規 4 / 継続 4) / 解消 2 件",
+    "blocks": [
+      {
+        "type": "header",
+        "text": {
+          "type": "plain_text",
+          "text": "SBOM web-01 2026-11-24"
+        }
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": "<!here> 通知 8 件 (新規 4 / 継続 4) / 解消 2 件"
+        }
+      },
+      {
+        "type": "context",
+        "elements": [
+          {
+            "type": "mrkdwn",
+            "text": "未解消 (通知条件内): CRITICAL 2 / HIGH 12 / LOW 1"
+          }
+        ]
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": ":red_circle: *<https://avd.aquasec.com/nvd/cve-2026-1000|CVE-2026-1000>* `openssl` 3.0.13 → 3.0.14  :rotating_light:KEV EPSS 0.97 :new:\n      _os_\n      :robot_face: *P1* 外部公開の nginx が利用している。KEV 掲載で悪用が確認済み。&lt;すぐ更新&gt; — apt upgrade openssl\n:red_circle: `lodash` 4.17.20 → 4.17.21 以上  *5件* (CVE-2026-2001, CVE-2026-2002, CVE-2026-2003, GHSA-xxxx ほか1件)  EPSS 0.02 :new:\n      _proj:home-a-app_ `/home/a/app/node_modules/lodash/package.json`\n      :robot_face: *?* \n:white_circle: *CVE-2026-3000* `golang.org/x/net` v0.1.0 (修正版なし)  EPSS 0.60 :new:\n      _sysbin_ `/usr/bin/&lt;tool&gt;&amp;x`\n:large_orange_circle: *CVE-2026-4000* `a&lt;b&gt;&amp;c` 2 → 3  :new:\n      _os_\n"
+        }
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*解消 (パッチ適用済み・削除済み)*\n:white_check_mark: CVE-2026-0999 `zlib1g` _os_\n:white_check_mark: CVE-2026-0998 `&lt;p&gt;` _proj:x_\n"
+        }
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*調査対象外*\n:no_entry_sign: `off` 無効 (enabled: false)\n:no_entry_sign: `proj: /home/a/work/sbom-ops` skip に一致\n:no_entry_sign: `venv: /smb/share/.venv` パスがない\n"
+        }
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": ":arrows_counterclockwise: 再起動待ち: reboot-required (libc6, linux-image-7.0.0-45-generic)\n:warning: スキャン失敗: opt: syft 失敗 (timeout)\n:warning: trivy DB が古い (2026-11-01T00:00:00Z)\n"
+        }
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": "*調査時間* (開始〜終了)\n`os`  syft 03:00:05〜03:00:19 (14s) / trivy 03:15:05〜03:15:11 (6s)\n`usr-local`  syft 周期内 (前回 11/20) / trivy 03:15:11〜03:15:14 (3s)\n`opt`  :x: syft 03:00:19〜05:00:19 (2.0h) / trivy 未実行\n`proj:home-a-app`  syft 時間切れで次回 / :x: trivy 03:15:14〜03:18:20 (3m)\n"
+        }
+      }
+    ]
+  }
+}

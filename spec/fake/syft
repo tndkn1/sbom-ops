@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+# テスト用の偽 syft。$FAKE_STATE/version の中身 (1.0 など) を example パッケージの版として SBOM を書く。
+import json, os, sys
+args = sys.argv[1:]
+out = [a.split("=", 1)[1] for a in args if a.startswith("cyclonedx-json=")][0]
+ver = open(os.path.join(os.environ["FAKE_STATE"], "version")).read().strip()
+bom = {"bomFormat": "CycloneDX", "specVersion": "1.6", "components": [
+    {"bom-ref": "pkg:pypi/example@%s?package-id=1" % ver, "type": "library", "name": "example",
+     "version": ver, "purl": "pkg:pypi/example@" + ver,
+     "properties": [{"name": "syft:location:0:path", "value": "/lib/example-%s.dist-info/METADATA" % ver}]}]}
+with open(out, "w") as f:
+    json.dump(bom, f)

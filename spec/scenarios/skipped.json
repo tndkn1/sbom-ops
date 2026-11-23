@@ -1,0 +1,22 @@
+{
+  "_doc": "調査対象外 (無効・パスがない・skip) と --no-scan の調査時間",
+  "config": {"targets": [
+    {"id": "app", "type": "dir", "path": "{dir}/app", "every": "1d"},
+    {"id": "off", "type": "dir", "path": "/nonexistent", "enabled": false},
+    {"id": "gone", "type": "dir", "path": "/nonexistent-sbomops"},
+    {"id": "globbed", "type": "dir", "path_glob": "{dir}/g/*", "skip": ["{dir}/g/skip-*"]}
+  ]},
+  "steps": [
+    {"set_version": "1.0"},
+    {"mkdir": ["g/one", "g/skip-me", "g/.hidden"]},
+    {"run": {}, "expect": {"rc": 0, "sent": true,
+                           "skipped": [["off", "無効 (enabled: false)"], ["gone: /nonexistent-sbomops", "パスがない"],
+                                       ["globbed: {dir}/g/skip-me", "skip に一致"]],
+                           "timings": [{"unit": "app", "syft": "ok", "trivy": "ok"},
+                                       {"unit": "globbed:{dirname}_g_one", "syft": "ok", "trivy": "ok"}]}},
+    {"age_notifications": 1},
+    {"run": {"no_scan": true}, "expect": {"sent": true,
+                                          "timings": [{"unit": "app", "syft": null, "syft_skip_prefix": "--no-scan", "trivy": "ok"},
+                                                      {"unit": "globbed:{dirname}_g_one", "syft": null, "syft_skip_prefix": "--no-scan", "trivy": "ok"}]}}
+  ]
+}

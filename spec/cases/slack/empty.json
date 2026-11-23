@@ -1,0 +1,50 @@
+{
+  "_doc": "通知対象なし (dry-run などで送る場合の形)",
+  "base_row": {
+    "key": "",
+    "unit": "os",
+    "vuln_id": "CVE-0",
+    "pkg": "p",
+    "pkg_type": "ubuntu",
+    "version": "1.0",
+    "fixed": "1.1",
+    "vstatus": "fixed",
+    "severity": "HIGH",
+    "title": "",
+    "url": "",
+    "location": "",
+    "purl": "pkg:deb/ubuntu/p@1.0",
+    "kev": 0,
+    "epss": null,
+    "class": "active",
+    "eligible": 1,
+    "state": "open",
+    "first_seen": "2026-11-01",
+    "last_seen": "2026-11-24",
+    "resolved_at": null,
+    "last_notified": null
+  },
+  "report": {
+    "host": "h",
+    "date": "2026-11-24"
+  },
+  "want": {
+    "text": "SBOM h 2026-11-24: 通知対象なし",
+    "blocks": [
+      {
+        "type": "header",
+        "text": {
+          "type": "plain_text",
+          "text": "SBOM h 2026-11-24"
+        }
+      },
+      {
+        "type": "section",
+        "text": {
+          "type": "mrkdwn",
+          "text": "通知対象なし"
+        }
+      }
+    ]
+  }
+}

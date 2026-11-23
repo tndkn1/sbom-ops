@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+# テスト用の偽 trivy。example の版が 1.0 なら CVE-2099-0001 (HIGH, 修正版 1.1) と
+# CVE-2099-0002 (LOW, 修正版なし) を返し、1.1 以上なら何も返さない (「パッチ適用 → 解消」の再現)。
+import json, sys
+args = sys.argv[1:]
+if "--download-db-only" in args:
+    sys.exit(0)
+if args and args[0] == "version":
+    print(json.dumps({"VulnerabilityDB": {"UpdatedAt": "2099-01-01T00:00:00Z"}}))
+    sys.exit(0)
+out = args[args.index("-o") + 1]
+with open(args[-1]) as f:
+    bom = json.load(f)
+c = bom["components"][0]
+vulns = []
+if c["version"] == "1.0":
+    for vid, sev, fix in (("CVE-2099-0001", "HIGH", "1.1"), ("CVE-2099-0002", "LOW", "")):
+        vulns.append({"VulnerabilityID": vid, "PkgName": "example", "InstalledVersion": c["version"],
+                      "FixedVersion": fix, "Status": "fixed" if fix else "affected", "Severity": sev,
+                      "Title": "test", "PrimaryURL": "",
+                      "PkgIdentifier": {"PURL": c["purl"], "BOMRef": c["bom-ref"]}})
+with open(out, "w") as f:
+    json.dump({"Results": [{"Target": "Python", "Class": "lang-pkgs", "Type": "python-pkg",
+                            "Vulnerabilities": vulns}]}, f)

@@ -1,0 +1,11 @@
+{
+  "_doc": "受容リストの期限内は送らず、期限が切れたら通常の通知に戻して警告する",
+  "steps": [
+    {"set_version": "1.0"},
+    {"write_accepted": "CVE-2099-0001 app example {today+10} 検証中\n"},
+    {"run": {}, "expect": {"rc": 0, "sent": false}},
+    {"write_accepted": "CVE-2099-0001 app example {today-1} 検証中\n"},
+    {"run": {"force": true}, "expect": {"sent": true, "items": [["CVE-2099-0001", "new"]],
+                                        "warnings_contain": ["受容期限が切れた検出 1 件"]}}
+  ]
+}

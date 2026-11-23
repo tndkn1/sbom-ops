@@ -1,0 +1,217 @@
+{
+  "_doc": "設定の検証。config (JSON) か yaml (YAML 文字列) を読む。errors_contain の各文字列がエラーメッセージに含まれること。ok: true は検証を通り、want の値になること",
+  "cases": [
+    {
+      "config": {
+        "targets": [
+          {
+            "id": "a",
+            "type": "dir"
+          },
+          {
+            "id": "a",
+            "type": "nope"
+          }
+        ],
+        "notify": {
+          "policy": {
+            "repeat": "always"
+          }
+        }
+      },
+      "errors_contain": [
+        "dir には path か path_glob が必要",
+        "id 'a' が重複",
+        "type は",
+        "notify.policy.repeat は until_fixed / once"
+      ]
+    },
+    {
+      "config": {
+        "notify": {
+          "policy": {
+            "min_severity": "urgent"
+          }
+        }
+      },
+      "errors_contain": [
+        "notify.policy.min_severity は"
+      ]
+    },
+    {
+      "config": {
+        "notify": {
+          "policy": {
+            "min_severity": "critical"
+          }
+        }
+      },
+      "ok": true,
+      "want": {
+        "notify.policy.min_severity": "CRITICAL"
+      }
+    },
+    {
+      "config": {
+        "run": {
+          "scan_budget": "3 hours"
+        }
+      },
+      "errors_contain": [
+        "期間の書式が不正"
+      ]
+    },
+    {
+      "config": {
+        "resources": {
+          "mem_max": "lots"
+        }
+      },
+      "errors_contain": [
+        "サイズの書式が不正"
+      ]
+    },
+    {
+      "config": {
+        "assess": {
+          "engine": "gpt"
+        }
+      },
+      "errors_contain": [
+        "assess.engine は claude / codex / command"
+      ]
+    },
+    {
+      "config": {
+        "assess": {
+          "engine": "command",
+          "enabled": true
+        }
+      },
+      "errors_contain": [
+        "assess.command が必要"
+      ]
+    },
+    {
+      "config": {
+        "targets": [
+          {
+            "type": "dir",
+            "path": "/x"
+          }
+        ]
+      },
+      "errors_contain": [
+        "targets[0]: id が必要"
+      ]
+    },
+    {
+      "config": {
+        "targets": [
+          "x"
+        ]
+      },
+      "errors_contain": [
+        "targets[0] はマップで書いてください"
+      ]
+    },
+    {
+      "config": {
+        "targets": [
+          {
+            "id": "i",
+            "type": "image"
+          }
+        ]
+      },
+      "errors_contain": [
+        "targets[i]: image には ref が必要"
+      ]
+    },
+    {
+      "config": {
+        "targets": [
+          {
+            "id": "d",
+            "type": "dir",
+            "path": "/x",
+            "every": "daily"
+          }
+        ]
+      },
+      "errors_contain": [
+        "targets[d]: 期間の書式が不正"
+      ]
+    },
+    {
+      "config": {
+        "targets": [
+          {
+            "id": "d",
+            "type": "dir",
+            "path": "/x"
+          }
+        ]
+      },
+      "ok": true,
+      "want": {
+        "targets.0.every": "1d",
+        "targets.0.max_runtime": "2h",
+        "targets.0.enabled": true
+      }
+    },
+    {
+      "config": {
+        "notify": {
+          "policy": {
+            "always_notify": {}
+          }
+        }
+      },
+      "ok": true,
+      "want": {
+        "notify.policy.always_notify.kev": true,
+        "notify.policy.always_notify.epss_gte": 0.5
+      }
+    },
+    {
+      "config": {
+        "notify": {
+          "policy": {
+            "always_notify": {
+              "kev": false,
+              "epss_gte": null
+            }
+          }
+        }
+      },
+      "ok": true,
+      "want": {
+        "notify.policy.always_notify.kev": false,
+        "notify.policy.always_notify.epss_gte": null
+      }
+    },
+    {
+      "yaml": "targets:\n  - {id: d, type: dir, path: /x, enabled: no}\n  - {id: e, type: dir, path: /y, enabled: 'no'}\nnoise: {old_kernels: off, package_cache: Yes}\n",
+      "ok": true,
+      "want": {
+        "targets.0.enabled": false,
+        "noise.old_kernels": false,
+        "noise.package_cache": true
+      },
+      "_doc": "引用符なしの no / off / Yes は真偽値 (YAML 1.1)。'no' (引用符つき) は文字列で、Python の真偽判定では真"
+    },
+    {
+      "yaml": "targets:\n  - {id: off, type: dir, path: /x}\n",
+      "errors_contain": [
+        "targets[0]: id が必要"
+      ]
+    },
+    {
+      "yaml": "- a\n- b\n",
+      "errors_contain": [
+        "トップレベルはマップである必要があります"
+      ]
+    }
+  ]
+}

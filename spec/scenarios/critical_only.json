@@ -1,0 +1,8 @@
+{
+  "_doc": "min_severity: CRITICAL なら HIGH は送らない",
+  "policy": {"min_severity": "CRITICAL"},
+  "steps": [
+    {"set_version": "1.0"},
+    {"run": {}, "expect": {"rc": 0, "sent": false}}
+  ]
+}

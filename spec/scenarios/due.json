@@ -1,0 +1,11 @@
+{
+  "_doc": "every=1d なので同じ日の 2 回目は SBOM を作り直さない (syft は周期内)",
+  "steps": [
+    {"set_version": "1.0"},
+    {"run": {}, "expect": {"sent": true}},
+    {"set_version": "1.1"},
+    {"age_notifications": 1},
+    {"run": {}, "expect": {"sent": true, "items": [["CVE-2099-0001", "remind"]],
+                           "timings": [{"unit": "app", "syft": null, "syft_skip_prefix": "周期内 (前回 ", "trivy": "ok"}]}}
+  ]
+}
