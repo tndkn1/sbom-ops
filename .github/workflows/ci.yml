@@ -95,6 +95,7 @@ jobs:
             cat > /tmp/cmp-$impl.yaml <<EOF
           data_dir: /tmp/cmp-data-$impl
           secrets_file: ""
+          tools: {syft: $PWD/.tools/syft, trivy: $PWD/.tools/trivy}
           notify:
             suppress_file: ""
             policy: {min_severity: LOW, only_fixable: false, notify_reboot_required: false}
