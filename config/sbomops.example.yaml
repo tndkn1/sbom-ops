@@ -90,7 +90,7 @@ noise:
 notify:
   suppress_file: /etc/sbomops/accepted.tsv   # 期限付きの受容リスト
   policy:
-    min_severity: HIGH          # CRITICAL / HIGH / MEDIUM / LOW
+    min_severity: CRITICAL      # CRITICAL / HIGH / MEDIUM / LOW (通知を広げるときは HIGH などに下げる)
     only_fixable: true          # 修正版があるものだけ
     always_notify:              # 上の 2 条件に関係なく通知する
       kev: true
