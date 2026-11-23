@@ -104,6 +104,8 @@ notify:
     notify_warnings: true
     max_items: 30
     group_by_package: true
+    report_timings: true        # 対象ごとの syft / trivy の開始・終了時刻と所要時間を載せる
+    report_skipped: true        # 調査対象外にしたもの (無効・skip・パスなし・時間切れなど) を載せる
   slack:
     enabled: true
     webhook_env: SLACK_WEBHOOK_URL

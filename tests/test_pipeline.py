@@ -74,6 +74,10 @@ class PipelineTest(unittest.TestCase):
         # HIGH で修正版ありの 1 件だけ (LOW は min_severity 未満)
         self.assertEqual([(r["vuln_id"], k) for r, k in rp.items], [("CVE-2099-0001", "new")])
 
+        # 対象ごとの所要時間が載る
+        self.assertEqual([t["unit"] for t in rp.timings], ["app"])
+        self.assertTrue(rp.timings[0]["syft"]["ok"] and rp.timings[0]["trivy"]["ok"])
+
         # 同じ日にもう一度実行しても再通知しない
         self.assertEqual(pipeline.run(cfg, force=True), 0)
         self.assertEqual(len(self.sent), 1)
@@ -102,6 +106,30 @@ class PipelineTest(unittest.TestCase):
         self.age_notifications(3)
         pipeline.run(cfg, force=True)
         self.assertEqual(len(self.sent), 1)
+
+    def test_timings_and_skipped(self):
+        self.user["targets"] = self.user["targets"] + [
+            {"id": "off", "type": "dir", "path": "/nonexistent", "every": "1d", "enabled": False},
+            {"id": "gone", "type": "dir", "path": "/nonexistent-sbomops", "every": "1d"}]
+        cfg = self.cfg()
+        self.set_version("1.0")
+        self.assertEqual(pipeline.run(cfg), 0)
+        rp = self.sent[-1]
+        self.assertIn(("off", "無効 (enabled: false)"), rp.skipped)
+        self.assertIn(("gone: /nonexistent-sbomops", "パスがない"), rp.skipped)
+        # 2 回目は周期内なので syft は動かさず、trivy だけ動く
+        self.age_notifications(2)
+        self.assertEqual(pipeline.run(cfg), 0)
+        t = self.sent[-1].timings[0]
+        self.assertIsNone(t["syft"])
+        self.assertTrue(t["syft_skip"].startswith("周期内"))
+        self.assertTrue(t["trivy"]["ok"])
+
+    def test_timings_can_be_disabled(self):
+        cfg = self.cfg(report_timings=False, report_skipped=False)
+        self.set_version("1.0")
+        self.assertEqual(pipeline.run(cfg), 0)
+        self.assertEqual((self.sent[-1].timings, self.sent[-1].skipped), ([], []))
 
     def test_min_severity_and_fixable(self):
         cfg = self.cfg(min_severity="LOW", only_fixable=False)

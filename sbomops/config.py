@@ -70,6 +70,8 @@ DEFAULTS = {
             "notify_warnings": True,     # スキャン失敗・SBOM の鮮度・DB の古さ
             "max_items": 30,             # 1通に載せる行数 (超過分は件数だけ)
             "group_by_package": True,    # 同じパッケージ・場所の CVE を 1 行にまとめる
+            "report_timings": True,      # 対象ごとの syft / trivy の開始・終了時刻と所要時間を載せる
+            "report_skipped": True,      # 調査対象外にしたもの (無効・skip・パスなし・時間切れなど) を載せる
         },
         "suppress_file": "/etc/sbomops/accepted.tsv",
         "slack": {

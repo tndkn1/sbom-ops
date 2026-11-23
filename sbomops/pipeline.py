@@ -32,12 +32,31 @@ def open_store(cfg: dict) -> Store:
     return Store(os.path.join(cfg["data_dir"], "state.db"))
 
 
-def scan_phase(cfg: dict, st: Store, units, only: set[str] | None, force: bool, warnings: list) -> None:
+def _timing(t0: float, t1: float, ok: bool) -> dict:
+    return {"start": t0, "end": t1, "sec": t1 - t0, "ok": ok}
+
+
+def _tm(timings: dict, uid: str) -> dict:
+    return timings.setdefault(uid, {"unit": uid, "syft": None, "trivy": None, "syft_skip": None})
+
+
+def scan_phase(cfg: dict, st: Store, units, only: set[str] | None, force: bool, warnings: list,
+               timings: dict | None = None, skipped: list | None = None) -> None:
     data = cfg["data_dir"]
+    timings = {} if timings is None else timings
+    skipped = [] if skipped is None else skipped
     state = st.units()
     if only:
+        for u in units:
+            if not (u.id in only or u.group in only):
+                _tm(timings, u.id)["syft_skip"] = "--only の対象外"
         units = [u for u in units if u.id in only or u.group in only]
     todo = targets.due(units, state, time.time(), force=force)
+    todo_ids = {u.id for u in todo}
+    for u in units:
+        if u.id not in todo_ids:
+            last = (state.get(u.id) or {}).get("last_scan_ts")
+            _tm(timings, u.id)["syft_skip"] = "周期内" + (f" (前回 {time.strftime('%m/%d', time.localtime(last))})" if last else "")
     budget = parse_duration(cfg["run"]["scan_budget"])
     start = time.monotonic()
     log.info("scan: %d / %d 単位が対象", len(todo), len(units))
@@ -45,14 +64,19 @@ def scan_phase(cfg: dict, st: Store, units, only: set[str] | None, force: bool, 
     for u in todo:
         if budget and time.monotonic() - start > budget:
             deferred.append(u.id)
+            _tm(timings, u.id)["syft_skip"] = "時間切れで次回"
+            skipped.append((u.id, "scan_budget 超過で次回に回した"))
             continue
+        t0 = time.time()
         try:
             path, r = scan.scan_unit(cfg, u, data)
+            _tm(timings, u.id)["syft"] = _timing(t0, time.time(), True)
             st.upsert_unit(u.id, sbom_path=path, digest=u.digest, last_scan_ts=time.time(),
                            last_scan_status="ok", last_scan_error=None, last_scan_sec=r.elapsed,
                            last_scan_rss=r.peak_rss)
         except Exception as e:  # noqa: BLE001
             log.error("scan %s 失敗: %s", u.id, e)
+            _tm(timings, u.id)["syft"] = _timing(t0, time.time(), False)
             st.upsert_unit(u.id, last_scan_status="failed", last_scan_error=str(e)[:500])
             warnings.append(f"スキャン失敗: {u.id}: {str(e)[:200]}")
     if deferred:
@@ -61,9 +85,12 @@ def scan_phase(cfg: dict, st: Store, units, only: set[str] | None, force: bool, 
 
 
 def match_phase(cfg: dict, st: Store, units, failed_groups: set[str], warnings: list,
-                today: str) -> tuple[list[str], set[str]]:
+                today: str, timings: dict | None = None,
+                skipped: list | None = None) -> tuple[list[str], set[str]]:
     """全単位を照合して状態 DB を更新する。(今回解消した key, 照合できた unit) を返す"""
     data = cfg["data_dir"]
+    timings = {} if timings is None else timings
+    skipped = [] if skipped is None else skipped
     try:
         match.update_db(cfg, data)
     except Exception as e:  # noqa: BLE001
@@ -89,12 +116,16 @@ def match_phase(cfg: dict, st: Store, units, failed_groups: set[str], warnings: 
         s = state.get(u.id) or {}
         sbom = s.get("sbom_path")
         if not sbom or not os.path.exists(sbom):
+            skipped.append((u.id, "SBOM がないため照合せず"))
             continue
+        t0 = time.time()
         try:
             out = match.match_unit(cfg, u.id, sbom, data, today)
+            _tm(timings, u.id)["trivy"] = _timing(t0, time.time(), True)
             recs = match.normalize(u.id, u.root, out, sbom)
         except Exception as e:  # noqa: BLE001
             log.error("match %s 失敗: %s", u.id, e)
+            _tm(timings, u.id)["trivy"] = _timing(t0, time.time(), False)
             st.upsert_unit(u.id, last_match_status="failed")
             warnings.append(f"照合失敗: {u.id}: {str(e)[:200]}")
             continue
@@ -165,6 +196,16 @@ def build_report(cfg: dict, st: Store, resolved_keys: list[str], warnings: list[
     return rp
 
 
+def attach_run_info(cfg: dict, rp: notify.Report, units, timings: dict, skipped: list) -> None:
+    """対象ごとの所要時間と調査対象外にしたものを通知に載せる (設定で切れる)"""
+    pol = cfg["notify"]["policy"]
+    if pol.get("report_timings", True):
+        order = [u.id for u in units] + [k for k in timings if k not in {u.id for u in units}]
+        rp.timings = [timings[k] for k in order if k in timings]
+    if pol.get("report_skipped", True):
+        rp.skipped = list(dict.fromkeys(skipped))
+
+
 def send(cfg: dict, st: Store, rp: notify.Report, dry_run: bool) -> int:
     pol = cfg["notify"]["policy"]
     rp.items.sort(key=lambda x: policy.sort_key(x[0], rp.assess))
@@ -222,6 +263,8 @@ def run(cfg: dict, *, only=None, force=False, no_scan=False, no_notify=False, dr
     today = dt.date.today().isoformat()
     rid = st.start_run(iso(now()))
     warnings: list[str] = []
+    timings: dict = {}
+    skipped: list = []
     summary = {}
     try:
         host.log_summary()
@@ -231,15 +274,19 @@ def run(cfg: dict, *, only=None, force=False, no_scan=False, no_notify=False, dr
             log.warning("OS が変わった (%s → %s)。全対象を作り直す", prev, fp)
             warnings.append(f"OS の変更を検知 ({prev} → {fp})。全対象の SBOM を作り直した")
             force = True
-        units, failed_groups = targets.expand(cfg)
+        units, failed_groups = targets.expand(cfg, skipped=skipped)
         if not units:
             raise RuntimeError("スキャン対象がない (targets を設定してください)")
         if not no_scan:
-            scan_phase(cfg, st, units, only, force, warnings)
+            scan_phase(cfg, st, units, only, force, warnings, timings, skipped)
+        else:
+            for u in units:
+                _tm(timings, u.id)["syft_skip"] = "--no-scan"
         st.set_meta("os_fingerprint", fp)
-        resolved, matched = match_phase(cfg, st, units, failed_groups, warnings, today)
+        resolved, matched = match_phase(cfg, st, units, failed_groups, warnings, today, timings, skipped)
         warnings += stale_warnings(cfg, st, units)
         rp = build_report(cfg, st, resolved, warnings, today)
+        attach_run_info(cfg, rp, units, timings, skipped)
         if cfg["assess"]["enabled"] if do_assess is None else do_assess:
             from . import assess
             try:
@@ -260,6 +307,7 @@ def run(cfg: dict, *, only=None, force=False, no_scan=False, no_notify=False, dr
         st.finish_run(rid, iso(now()), "failed", {"error": str(e)})
         if not no_notify:
             rp = notify.Report(host=cfg["host_label"], date=today, failed=str(e)[:300], warnings=warnings)
+            attach_run_info(cfg, rp, [], timings, skipped)
             try:
                 send(cfg, st, rp, dry_run)
             except Exception:  # noqa: BLE001

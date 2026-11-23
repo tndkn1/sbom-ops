@@ -4,8 +4,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 import urllib.request
 
+from ..util import fmt_duration
 from .base import Notifier, Report
 
 SEV_ICON = {"CRITICAL": ":red_circle:", "HIGH": ":large_orange_circle:", "MEDIUM": ":large_yellow_circle:",
@@ -79,6 +81,22 @@ def _group_line(group: list, assess: dict) -> str:
     return s + "  " + " ".join(tags) + _where(r) + _ai(best)
 
 
+def _hms(ts: float) -> str:
+    return time.strftime("%H:%M:%S", time.localtime(ts))
+
+
+def _step(name: str, t: dict | None, skip: str | None = None) -> str:
+    if not t:
+        return f"{name} {_esc(skip or 'なし')}"
+    mark = "" if t["ok"] else ":x: "
+    return f"{mark}{name} {_hms(t['start'])}〜{_hms(t['end'])} ({fmt_duration(t['sec'])})"
+
+
+def _timing_line(t: dict) -> str:
+    return (f"`{_esc(t['unit'])}`  " + _step("syft", t["syft"], t.get("syft_skip"))
+            + " / " + _step("trivy", t["trivy"], "未実行"))
+
+
 def _chunks(lines: list[str]) -> list[str]:
     out, cur = [], ""
     for ln in lines:
@@ -145,6 +163,13 @@ class SlackNotifier(Notifier):
             blocks.append({"type": "divider"})
             for c in _chunks(["*解消 (パッチ適用済み・削除済み)*"] + rl):
                 blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": c}})
+        if rp.skipped:
+            sl = [f":no_entry_sign: `{_esc(n)}` {_esc(why)}" for n, why in rp.skipped[:20]]
+            if len(rp.skipped) > 20:
+                sl.append(f"…ほか {len(rp.skipped) - 20} 件")
+            blocks.append({"type": "divider"})
+            for c in _chunks(["*調査対象外*"] + sl):
+                blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": c}})
         extra = []
         if rp.reboot:
             extra.append(f":arrows_counterclockwise: 再起動待ち: {_esc(rp.reboot)}")
@@ -152,6 +177,10 @@ class SlackNotifier(Notifier):
         if extra:
             blocks.append({"type": "divider"})
             for c in _chunks(extra):
+                blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": c}})
+        if rp.timings:
+            blocks.append({"type": "divider"})
+            for c in _chunks(["*調査時間* (開始〜終了)"] + [_timing_line(t) for t in rp.timings]):
                 blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": c}})
         if len(blocks) > MAX_BLOCKS:
             blocks = blocks[:MAX_BLOCKS - 1] + [{"type": "context", "elements": [

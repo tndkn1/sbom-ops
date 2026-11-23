@@ -48,14 +48,18 @@ def _excludes(root: str, patterns: list[str]) -> list[str]:
     return out
 
 
-def expand(cfg: dict, with_images: bool = True) -> tuple[list[Unit], set[str]]:
-    """(単位の一覧, 展開に失敗した target id) を返す。失敗した target の既存の単位は解消扱いにしない"""
+def expand(cfg: dict, with_images: bool = True,
+           skipped: list | None = None) -> tuple[list[Unit], set[str]]:
+    """(単位の一覧, 展開に失敗した target id) を返す。失敗した target の既存の単位は解消扱いにしない。
+    skipped を渡すと、調査対象から外したものを (名前, 理由) で追加する"""
+    skipped = [] if skipped is None else skipped
     from .config import SYSTEM_EXCLUDES
     res = cfg["resources"]
     units: list[Unit] = []
     failed: set[str] = set()
     for t in cfg["targets"]:
         if not t.get("enabled", True):
+            skipped.append((t["id"], "無効 (enabled: false)"))
             continue
         every = parse_duration(t["every"])
         maxrt = parse_duration(t["max_runtime"])
@@ -76,11 +80,15 @@ def expand(cfg: dict, with_images: bool = True) -> tuple[list[Unit], set[str]]:
             for g in ([t["path_glob"]] if isinstance(t.get("path_glob"), str) else t.get("path_glob") or []):
                 paths += sorted(p.rstrip("/") for p in glob.glob(g) if os.path.isdir(p))
             skip = t.get("skip") or []
+            for p in paths:
+                if any(fnmatch.fnmatch(p, s) for s in skip):
+                    skipped.append((f"{t['id']}: {p}", "skip に一致"))
             paths = [p for p in paths if not any(fnmatch.fnmatch(p, s) for s in skip)]
             multi = bool(t.get("path_glob")) or len(paths) > 1
             for p in paths:
                 if not os.path.isdir(p):
                     log.info("-- %s: %s がない (スキップ)", t["id"], p)
+                    skipped.append((f"{t['id']}: {p}", "パスがない"))
                     continue
                 uid = f"{t['id']}:{safe_name(p.strip('/'))}" if multi else t["id"]
                 # sbomops 自身のデータ (SBOM ファイル) を syft の sbom-cataloger が読まないように外す
@@ -98,12 +106,14 @@ def expand(cfg: dict, with_images: bool = True) -> tuple[list[Unit], set[str]]:
             rt = t.get("runtime") or host.container_runtime()
             if not rt:
                 log.warning("-- %s: docker / podman が使えない (スキップ)", t["id"])
+                skipped.append((t["id"], "docker / podman が使えない"))
                 failed.add(t["id"])
                 continue
             try:
                 imgs = host.running_images(rt)
             except Exception as e:  # noqa: BLE001
                 log.warning("-- %s: %s", t["id"], e)
+                skipped.append((t["id"], f"稼働中イメージを取得できない: {str(e)[:100]}"))
                 failed.add(t["id"])
                 continue
             for img, iid in imgs:

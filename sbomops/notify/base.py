@@ -16,6 +16,9 @@ class Report:
     open_counts: dict = field(default_factory=dict)  # 通知条件を満たす未解消の重大度別件数
     assess: dict = field(default_factory=dict)       # key -> assessment 行
     failed: str | None = None                       # ジョブ自体の失敗
+    timings: list = field(default_factory=list)      # 対象ごとの所要時間 [{"unit", "syft", "trivy"}]
+                                                    #   syft/trivy: {"start", "end", "sec", "ok"} か None、syft_skip: 理由
+    skipped: list = field(default_factory=list)      # 調査対象外にしたもの [(名前, 理由)]
 
     def empty(self) -> bool:
         return not (self.items or self.resolved or self.warnings or self.reboot or self.failed)

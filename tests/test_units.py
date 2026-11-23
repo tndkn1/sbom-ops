@@ -191,7 +191,10 @@ class SlackTest(unittest.TestCase):
     def test_render_limits(self):
         items = [(row(key=f"k{i}", vuln_id=f"CVE-{i}", pkg=f"p{i % 40}", location=f"/x/{i % 40}" * 20,
                       kev=int(i == 3)), "new") for i in range(400)]
-        rp = Report(host="h", date="2026-01-01", items=items, warnings=["w"] * 30, open_counts={"HIGH": 400})
+        tm = [{"unit": f"u{i}", "syft": None, "syft_skip": "周期内",
+               "trivy": {"start": 0, "end": 5, "sec": 5, "ok": True}} for i in range(100)]
+        rp = Report(host="h", date="2026-01-01", items=items, warnings=["w"] * 30, open_counts={"HIGH": 400},
+                    timings=tm, skipped=[("x", "skip に一致")] * 30)
         n = SlackNotifier({"mention": "<!here>", "mention_on": ["kev"]}, dict(config.DEFAULTS["notify"]["policy"]))
         p = n.render(rp)
         self.assertLessEqual(len(p["blocks"]), 50)
@@ -199,6 +202,18 @@ class SlackTest(unittest.TestCase):
             if b["type"] == "section":
                 self.assertLessEqual(len(b["text"]["text"]), 3000)
         self.assertTrue(p["blocks"][1]["text"]["text"].startswith("<!here>"))
+
+    def test_render_timings(self):
+        tm = [{"unit": "os", "syft": {"start": 0, "end": 75, "sec": 75, "ok": True},
+               "trivy": {"start": 80, "end": 83, "sec": 3, "ok": False}, "syft_skip": None},
+              {"unit": "opt", "syft": None, "syft_skip": "周期内 (前回 11/20)", "trivy": None}]
+        rp = Report(host="h", date="2026-01-01", timings=tm, skipped=[("off", "無効 (enabled: false)")])
+        n = SlackNotifier({}, dict(config.DEFAULTS["notify"]["policy"]))
+        text = "\n".join(b["text"]["text"] for b in n.render(rp)["blocks"] if b["type"] == "section")
+        self.assertIn("*調査対象外*", text)
+        self.assertIn("`off` 無効 (enabled: false)", text)
+        self.assertRegex(text, r"`os`  syft \d\d:\d\d:\d\d〜\d\d:\d\d:\d\d \(75s\) / :x: trivy .*\(3s\)")
+        self.assertIn("`opt`  syft 周期内 (前回 11/20) / trivy 未実行", text)
 
 
 if __name__ == "__main__":
