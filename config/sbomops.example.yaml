@@ -2,6 +2,8 @@
 # 省略した項目は既定値 (sbomops/config.py の DEFAULTS) が使われる。
 
 # host_label: web-01            # 通知に出す名前 (既定: hostname)
+# host_root: /                  # 調べるホストのルート。コンテナでホストの / を /host にマウントしたときは /host
+                                # (コンテナイメージでは環境変数 SBOMOPS_HOST_ROOT=/host で設定済み)。パスはホスト上のパスで書く
 data_dir: /var/lib/sbomops
 secrets_file: /etc/sbomops/secrets.env   # SLACK_WEBHOOK_URL=... (0600)
 

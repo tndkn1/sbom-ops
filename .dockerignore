@@ -1,0 +1,8 @@
+.git
+.tools
+dev-data
+var
+**/__pycache__
+go/sbomops-go
+config/local*.yaml
+secrets.env

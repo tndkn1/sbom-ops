@@ -165,10 +165,13 @@ func ScanUnit(cfg *Config, u Unit, dataDir string) (string, Result, error) {
 	} else {
 		name = strings.TrimRight(u.Root, "/")
 		if name == "" {
-			name = nodename()
+			name = HostName()
 		}
 	}
 	source := u.Source
+	if u.Type == "dir" && hostRoot != "/" {
+		source = "dir:" + hpath(u.Root) // 記録はホスト上のパスのまま、読むのは host_root の下
+	}
 	logInfo("scan %s (%s)", u.ID, u.Source)
 	snap := ""
 	if u.Type == "os-packages" {
@@ -177,7 +180,7 @@ func ScanUnit(cfg *Config, u Unit, dataDir string) (string, Result, error) {
 			return "", Result{}, err
 		}
 		defer os.RemoveAll(snap)
-		n, err := SnapshotOSDB(u.Root, snap)
+		n, err := SnapshotOSDB(hpath(u.Root), snap)
 		if err != nil {
 			return "", Result{}, err
 		}

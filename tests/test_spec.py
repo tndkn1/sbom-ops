@@ -113,7 +113,7 @@ class ConfigSpecTest(unittest.TestCase):
     def test_cases(self):
         for x in load("cases/config.json")["cases"]:
             suffix = ".yaml" if "yaml" in x else ".json"
-            with self.subTest(x=x.get("config") or x["yaml"]), \
+            with self.subTest(x=x.get("yaml", x.get("config"))), \
                     tempfile.NamedTemporaryFile("w", suffix=suffix, delete=False, encoding="utf-8") as f:
                 if "yaml" in x:
                     f.write(x["yaml"])
@@ -193,6 +193,12 @@ class ScenarioSpecTest(unittest.TestCase):
             for n in range(0, 31):
                 m[f"{{today+{n}}}"] = (today + dt.timedelta(days=n)).isoformat()
                 m[f"{{today-{n}}}"] = (today - dt.timedelta(days=n)).isoformat()
+            for rel, body in (sc.get("files") or {}).items():
+                os.makedirs(os.path.dirname(os.path.join(d, rel)), exist_ok=True)
+                with open(os.path.join(d, rel), "w", encoding="utf-8") as f:
+                    f.write(body)
+            for rel in sc.get("dirs") or []:
+                os.makedirs(os.path.join(d, rel), exist_ok=True)
             user = merge(base, sc.get("config"))
             user["notify"] = merge(user["notify"], {"policy": sc.get("policy") or {}})
             user = _subst(user, m)
@@ -227,6 +233,15 @@ class ScenarioSpecTest(unittest.TestCase):
                         before = len(sent)
                         rc = pipeline.run(cfg, force=r.get("force", False), no_scan=r.get("no_scan", False))
                         self._check(step["expect"], rc, sent[before:], ctx)
+                        for k, want in (step["expect"].get("meta") or {}).items():
+                            st = Store(os.path.join(cfg["data_dir"], "state.db"))
+                            got = st.get_meta(k)
+                            st.close()
+                            if want.startswith("!"):
+                                self.assertNotEqual(got, want[1:], ctx)
+                                self.assertTrue(got, ctx)
+                            else:
+                                self.assertEqual(got, want, ctx)
                     else:
                         self.fail(f"不明な step: {step}")
 
@@ -240,6 +255,10 @@ class ScenarioSpecTest(unittest.TestCase):
         rp = sent[-1]
         if "items" in e:
             self.assertEqual([[r["vuln_id"], k] for r, k in rp.items], e["items"], ctx)
+        if "host" in e:
+            self.assertEqual(rp.host, e["host"], ctx)
+        if "locations" in e:
+            self.assertEqual([r["location"] for r, _ in rp.items], e["locations"], ctx)
         if "resolved" in e:
             self.assertEqual([r["vuln_id"] for r in rp.resolved], e["resolved"], ctx)
         for s in e.get("skipped") or []:

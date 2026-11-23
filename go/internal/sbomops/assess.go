@@ -50,7 +50,7 @@ func redact(s string, cfg *Config) string {
 		return s
 	}
 	if rd["hostname"] {
-		if hn, _ := os.Hostname(); hn != "" {
+		if hn := HostName(); hn != "" {
 			s = strings.ReplaceAll(s, hn, "HOST")
 		}
 	}
@@ -185,7 +185,7 @@ func RunAssess(cfg *Config, st *Store, rows []*Finding, limit int) (map[string]*
 		}
 		items = append(items, it)
 	}
-	osName := getOr(OSRelease("/"), "PRETTY_NAME", "Linux")
+	osName := getOr(OSRelease(hpath("/")), "PRETTY_NAME", "Linux")
 	lang := "English"
 	if a.Language == "ja" {
 		lang = "日本語"

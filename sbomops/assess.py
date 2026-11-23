@@ -9,7 +9,6 @@ import json
 import os
 import pwd
 import re
-import socket
 import subprocess
 import tempfile
 
@@ -40,7 +39,7 @@ def _redact(s: str, cfg: dict) -> str:
     if not s:
         return s
     if rd.get("hostname"):
-        hn = socket.gethostname()
+        hn = host.hostname()
         if hn:
             s = s.replace(hn, "HOST")
     if rd.get("home_paths"):

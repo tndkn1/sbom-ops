@@ -42,6 +42,7 @@ var (
 
 type Config struct {
 	HostLabel   string    `json:"host_label"`
+	HostRoot    string    `json:"host_root"`
 	DataDir     string    `json:"data_dir"`
 	SecretsFile string    `json:"secrets_file"`
 	Tools       Tools     `json:"tools"`
@@ -391,9 +392,23 @@ func pyList(items []string) string {
 // validate は Python 版 config.validate と同じ検査をし、型付きの設定にする。
 func validate(m map[string]any) (*Config, error) {
 	var errs []string
-	host, _ := os.Hostname()
+	hr := os.Getenv("SBOMOPS_HOST_ROOT")
+	if hr == "" {
+		hr = str(m["host_root"])
+	}
+	hr = strings.TrimRight(hr, "/")
+	if hr == "" {
+		hr = "/"
+	}
+	m["host_root"] = hr
+	if !strings.HasPrefix(hr, "/") {
+		errs = append(errs, "host_root は絶対パス")
+	} else if !isDir(hr) {
+		errs = append(errs, fmt.Sprintf("host_root %s がない (コンテナなら -v /:%s:ro でマウント)", hr, hr))
+	}
+	setHostRoot(hr)
 	if !truthy(m["host_label"]) {
-		m["host_label"] = host
+		m["host_label"] = HostName()
 	}
 	notify := getMap(m, "notify")
 	pol := getMap(notify, "policy")

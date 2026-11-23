@@ -4,7 +4,6 @@ from __future__ import annotations
 import copy
 import json
 import os
-import socket
 
 from .util import parse_duration, parse_size
 
@@ -21,6 +20,7 @@ SYSTEM_EXCLUDES = [
 
 DEFAULTS = {
     "host_label": None,                 # 通知に出すホスト名 (既定: hostname)
+    "host_root": "/",                   # 調べるホストのルート (コンテナでは /host。環境変数 SBOMOPS_HOST_ROOT が優先)
     "data_dir": "/var/lib/sbomops",
     "secrets_file": "/etc/sbomops/secrets.env",
     "tools": {"syft": None, "trivy": None},   # 未指定なら /opt/sbomops/bin → PATH の順に探す
@@ -164,7 +164,14 @@ def load(path: str | None) -> dict:
 
 def validate(cfg: dict) -> None:
     errs = []
-    cfg["host_label"] = cfg.get("host_label") or socket.gethostname()
+    from . import host
+    cfg["host_root"] = (os.environ.get("SBOMOPS_HOST_ROOT") or cfg.get("host_root") or "/").rstrip("/") or "/"
+    if not cfg["host_root"].startswith("/"):
+        errs.append("host_root は絶対パス")
+    elif not os.path.isdir(cfg["host_root"]):
+        errs.append(f"host_root {cfg['host_root']} がない (コンテナなら -v /:{cfg['host_root']}:ro でマウント)")
+    host.set_root(cfg["host_root"])
+    cfg["host_label"] = cfg.get("host_label") or host.hostname()
     pol = cfg["notify"]["policy"]
     if str(pol["min_severity"]).upper() not in SEVERITIES:
         errs.append(f"notify.policy.min_severity は {SEVERITIES} のいずれか")

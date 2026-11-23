@@ -1,0 +1,23 @@
+# docker compose up -d / podman compose up -d
+# SLACK_WEBHOOK_URL は .env か環境変数で渡す
+services:
+  sbomops:
+    image: ghcr.io/tndkn1/sbom-ops:latest
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Tokyo
+      SBOMOPS_RUN_AT: "03:00"
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:?SLACK_WEBHOOK_URL を設定してください}
+    volumes:
+      - /:/host:ro
+      - sbomops-data:/var/lib/sbomops
+      # 自分の設定・受容リストを使う場合
+      # - ./config.yaml:/etc/sbomops/config.yaml:ro
+      # - ./accepted.tsv:/etc/sbomops/accepted.tsv:ro
+      # 稼働中コンテナのイメージも調べる場合 (ソケットを渡すと docker の root 権限相当になる点に注意)
+      # - /var/run/docker.sock:/var/run/docker.sock
+    # SELinux が有効なホスト (RHEL 系) で /host を読むため
+    security_opt:
+      - label=disable
+volumes:
+  sbomops-data: {}

@@ -18,6 +18,65 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// hostRoot は調べるホストのルート。コンテナからホストの / を /host にマウントして調べるときは "/host"
+// (設定 host_root / 環境変数 SBOMOPS_HOST_ROOT。LoadConfig が設定する)。
+// 記録するパス (unit の root・検出の場所) はホスト上のパスのままにし、読むときだけこれを前に付ける。
+var hostRoot = "/"
+
+func setHostRoot(root string) {
+	root = strings.TrimRight(root, "/")
+	if root == "" {
+		root = "/"
+	}
+	hostRoot = root
+}
+
+// hpath はホスト上のパス p を、このプロセスから読めるパスにする。
+func hpath(p string) string {
+	if hostRoot == "/" {
+		return p
+	}
+	return hostRoot + "/" + strings.TrimLeft(p, "/")
+}
+
+// unhpath は hpath の逆 (glob の結果などをホスト上のパスに戻す)。
+func unhpath(p string) string {
+	if hostRoot == "/" || !(p == hostRoot || strings.HasPrefix(p, hostRoot+"/")) {
+		return p
+	}
+	if r := p[len(hostRoot):]; r != "" {
+		return r
+	}
+	return "/"
+}
+
+// HostName は調べるホストの名前 (host_root が / 以外なら <host_root>/etc/hostname)。
+func HostName() string {
+	if hostRoot != "/" {
+		if b, err := os.ReadFile(hpath("/etc/hostname")); err == nil {
+			if n := strings.TrimSpace(string(b)); n != "" {
+				return n
+			}
+		}
+	}
+	h, _ := os.Hostname()
+	return h
+}
+
+func dpkgCmd() []string {
+	if hostRoot == "/" {
+		return []string{"dpkg-query"}
+	}
+	return []string{"dpkg-query", "--admindir", hpath("/var/lib/dpkg")}
+}
+
+func rpmCmd() []string {
+	if hostRoot == "/" {
+		return []string{"rpm"}
+	}
+	return []string{"rpm", "--root", hostRoot}
+}
+
 func OSRelease(root string) map[string]string {
 	out := map[string]string{}
 	for _, p := range []string{"etc/os-release", "usr/lib/os-release"} {
@@ -49,7 +108,7 @@ func getOr(m map[string]string, k, def string) string {
 }
 
 func OSFingerprint() string {
-	r := OSRelease("/")
+	r := OSRelease(hpath("/"))
 	return getOr(r, "ID", "?") + "-" + getOr(r, "VERSION_ID", "?")
 }
 
@@ -60,10 +119,10 @@ func which(name string) bool {
 
 // PackageManager はパッケージ DB の種類。dpkg と rpm が両方ある場合は dpkg を優先。
 func PackageManager() string {
-	if isFile("/var/lib/dpkg/status") && which("dpkg-query") {
+	if isFile(hpath("/var/lib/dpkg/status")) && which("dpkg-query") {
 		return "dpkg"
 	}
-	if which("rpm") && (isDir("/var/lib/rpm") || isDir("/usr/lib/sysimage/rpm")) {
+	if which("rpm") && (isDir(hpath("/var/lib/rpm")) || isDir(hpath("/usr/lib/sysimage/rpm"))) {
 		return "rpm"
 	}
 	return ""
@@ -84,15 +143,6 @@ var runningKernel = func() string {
 		return ""
 	}
 	return charsToString(u.Release[:])
-}
-
-func nodename() string {
-	var u unix.Utsname
-	if err := unix.Uname(&u); err != nil {
-		h, _ := os.Hostname()
-		return h
-	}
-	return charsToString(u.Nodename[:])
 }
 
 type procOut struct {
@@ -150,7 +200,7 @@ func FileOwners(paths []string) map[string]string {
 		chunk := uniq[i:min(i+200, len(uniq))]
 		if pm == "dpkg" {
 			// 出力: "pkg1, pkg2: /path"。所有者がないものは stderr に出る
-			r, _ := runOut(append([]string{"dpkg-query", "-S"}, chunk...), 120*time.Second, "")
+			r, _ := runOut(append(append(dpkgCmd(), "-S"), chunk...), 120*time.Second, "")
 			for _, line := range splitLines(r.stdout) {
 				if !strings.Contains(line, ": ") || strings.HasPrefix(line, "diversion") {
 					continue
@@ -162,7 +212,7 @@ func FileOwners(paths []string) map[string]string {
 				}
 			}
 		} else {
-			r, _ := runOut(append([]string{"rpm", "-qf", "--qf", "%{NAME}\n"}, chunk...), 120*time.Second, "")
+			r, _ := runOut(append(append(rpmCmd(), "-qf", "--qf", "%{NAME}\n"), chunk...), 120*time.Second, "")
 			lines := splitLines(r.stdout)
 			if len(lines) == len(chunk) {
 				for j, path := range chunk {
@@ -172,7 +222,7 @@ func FileOwners(paths []string) map[string]string {
 				}
 			} else {
 				for _, path := range chunk {
-					r1, _ := runOut([]string{"rpm", "-qf", "--qf", "%{NAME}\n", path}, 120*time.Second, "")
+					r1, _ := runOut(append(rpmCmd(), "-qf", "--qf", "%{NAME}\n", path), 120*time.Second, "")
 					if r1.rc == 0 {
 						if l := splitLines(r1.stdout); len(l) > 0 {
 							res[path] = strings.TrimSpace(l[0])
@@ -203,9 +253,9 @@ func PackageVendors(pkgs []string) map[string]string {
 		chunk := uniq[i:min(i+200, len(uniq))]
 		var r procOut
 		if pm == "dpkg" {
-			r, _ = runOut(append([]string{"dpkg-query", "-W", "-f", "${Package}\t${Maintainer}\n"}, chunk...), 120*time.Second, "")
+			r, _ = runOut(append(append(dpkgCmd(), "-W", "-f", "${Package}\t${Maintainer}\n"), chunk...), 120*time.Second, "")
 		} else {
-			r, _ = runOut(append([]string{"rpm", "-q", "--qf", "%{NAME}\t%{VENDOR}\n"}, chunk...), 120*time.Second, "")
+			r, _ = runOut(append(append(rpmCmd(), "-q", "--qf", "%{NAME}\t%{VENDOR}\n"), chunk...), 120*time.Second, "")
 		}
 		for _, line := range splitLines(r.stdout) {
 			if name, vendor, ok := strings.Cut(line, "\t"); ok {
@@ -260,14 +310,14 @@ func verLess(a, b string) bool {
 // InstalledKernels はインストール済みカーネルのリリース文字列 (uname -r と同じ形)。
 func InstalledKernels() []string {
 	rel := map[string]bool{}
-	ds, _ := filepath.Glob("/lib/modules/*/")
-	ds2, _ := filepath.Glob("/usr/lib/modules/*/")
+	ds, _ := filepath.Glob(hpath("/lib/modules/*/"))
+	ds2, _ := filepath.Glob(hpath("/usr/lib/modules/*/"))
 	for _, p := range append(ds, ds2...) {
 		if !isDir(p) {
 			continue
 		}
 		name := filepath.Base(strings.TrimRight(p, "/"))
-		vm, _ := filepath.Glob("/boot/vmlinuz-" + name)
+		vm, _ := filepath.Glob(hpath("/boot/vmlinuz-" + name))
 		if exists(filepath.Join(p, "modules.dep")) || len(vm) > 0 {
 			rel[name] = true
 		}
@@ -282,9 +332,14 @@ func InstalledKernels() []string {
 
 // RebootRequired は再起動が必要なら理由を返す。
 func RebootRequired() string {
-	if exists("/var/run/reboot-required") {
+	// /var/run は /run へのリンクなので、host_root の下では /run を見る
+	if exists(hpath("/run/reboot-required")) || exists(hpath("/var/run/reboot-required")) {
 		pk := ""
-		if b, err := os.ReadFile("/var/run/reboot-required.pkgs"); err == nil {
+		pkgs := hpath("/run/reboot-required.pkgs")
+		if !exists(pkgs) {
+			pkgs = hpath("/var/run/reboot-required.pkgs")
+		}
+		if b, err := os.ReadFile(pkgs); err == nil {
 			var l []string
 			for _, x := range strings.Split(string(b), "\n") {
 				if x = strings.TrimSpace(x); x != "" {
@@ -302,7 +357,7 @@ func RebootRequired() string {
 		}
 		return "reboot-required"
 	}
-	if which("needs-restarting") {
+	if hostRoot == "/" && which("needs-restarting") {
 		r, err := runOut([]string{"needs-restarting", "-r"}, 60*time.Second, "")
 		if err == nil {
 			if r.rc == 1 {
@@ -369,7 +424,7 @@ func RunningExecutables() map[string]bool {
 }
 
 func LogHostSummary() {
-	r := OSRelease("/")
+	r := OSRelease(hpath("/"))
 	pm := PackageManager()
 	if pm == "" {
 		pm = "None"

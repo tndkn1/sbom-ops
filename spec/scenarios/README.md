@@ -5,6 +5,7 @@ Python 版は `tests/test_spec.py`、Go 版は `go/internal/sbomops/spec_test.go
 
 - `base_config` (`_base.json`) に各シナリオの `config` を重ねる。`policy` は `notify.policy` に重ねる
 - 文字列中の `{dir}` は一時ディレクトリ、`{dirname}` はその単位名用の形 (`safe_name(dir.strip("/"))`)、`{fake}` は偽ツールのディレクトリ、`{today+N}` / `{today-N}` は日付に置き換える
+- `files` (`{相対パス: 中身}`) と `dirs` (`[相対パス]`) は、設定を読む前に一時ディレクトリの下に作る
 - steps:
   - `{"set_version": "1.0"}` 偽 syft が SBOM に書く example パッケージの版 (1.0 なら脆弱、1.1 なら解消)
   - `{"write_accepted": "..."}` 受容リスト (`notify.suppress_file`) を書く
@@ -15,4 +16,6 @@ Python 版は `tests/test_spec.py`、Go 版は `go/internal/sbomops/spec_test.go
     - `items` 通知した [vuln_id, new|remind] (順序どおり) / `resolved` 解消として報告した vuln_id
     - `skipped` 調査対象外 [名前, 理由] のうち含まれるべきもの / `skipped_exact` 調査対象外の全体
     - `warnings_contain` 警告に含まれるべき文字列
+    - `host` 通知のホスト名 / `locations` 通知した検出の場所 (items と同じ順)
+    - `meta` 状態 DB の meta の値 (`{"os_fingerprint": "..."}`)。`"!?-?"` は「?-? でない」
     - `timings` 対象ごとの {unit, syft: ok|failed|null, syft_skip_prefix, trivy: ok|failed|null}。`[]` は載せないこと

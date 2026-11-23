@@ -8,7 +8,7 @@ import shutil
 import tempfile
 import time
 
-from . import runner
+from . import host, runner
 from .targets import Unit
 from .util import fmt_duration, log, safe_name
 
@@ -76,14 +76,16 @@ def scan_unit(cfg: dict, u: Unit, data_dir: str) -> tuple[str, runner.Result]:
     if u.type == "image":
         name = u.source.split(":", 1)[1]
     else:
-        name = u.root.rstrip("/") or os.uname().nodename
+        name = u.root.rstrip("/") or host.hostname()
     cmd = [syft, "scan", "-q", u.source, *u.syft_args, "--source-name", name,
            "-o", f"cyclonedx-json={tmp}"]
     log.info("scan %s (%s)", u.id, u.source)
+    if u.type == "dir" and host.ROOT != "/":
+        cmd[cmd.index(u.source)] = f"dir:{host.hpath(u.root)}"   # 記録はホスト上のパスのまま、読むのは host_root の下
     snap = None
     if u.type == "os-packages":
         snap = tempfile.mkdtemp(prefix="osdb-", dir=data_dir)
-        if not snapshot_os_db(u.root, snap):
+        if not snapshot_os_db(host.hpath(u.root), snap):
             shutil.rmtree(snap, ignore_errors=True)
             raise RuntimeError(f"{u.root} にパッケージ DB が見つからない")
         cmd[cmd.index(u.source)] = f"dir:{snap}"

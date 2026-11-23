@@ -212,6 +212,38 @@
       "errors_contain": [
         "トップレベルはマップである必要があります"
       ]
+    },
+    {
+      "config": {
+        "host_root": "relative/path"
+      },
+      "errors_contain": [
+        "host_root は絶対パス"
+      ]
+    },
+    {
+      "config": {
+        "host_root": "/nonexistent-sbomops-root"
+      },
+      "errors_contain": [
+        "host_root /nonexistent-sbomops-root がない"
+      ]
+    },
+    {
+      "config": {
+        "host_root": "/tmp/"
+      },
+      "ok": true,
+      "want": {
+        "host_root": "/tmp"
+      }
+    },
+    {
+      "config": {},
+      "ok": true,
+      "want": {
+        "host_root": "/"
+      }
     }
   ]
 }

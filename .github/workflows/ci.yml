@@ -3,6 +3,7 @@ name: ci
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
 
 permissions:
@@ -108,3 +109,75 @@ jobs:
           bin/sbomops -c /tmp/cmp-py.yaml run --dry-run > /tmp/cmp-py.json
           /tmp/sbomops-go -c /tmp/cmp-go.yaml run --dry-run > /tmp/cmp-go.json
           python3 scripts/compare-impl.py /tmp/cmp-py.json /tmp/cmp-go.json /tmp/cmp-data-py/state.db /tmp/cmp-data-go/state.db
+
+  # コンテナイメージ (Go 版 + syft + trivy)。試験に通ったら main と v* タグで ghcr.io に push する
+  image:
+    runs-on: ubuntu-latest
+    needs: [test, go, spec, compare]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: build (amd64、試験用)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: sbomops:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: smoke (コンテナからホストを調べた結果が、ネイティブの Python 版と同じか)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq python3-yaml >/dev/null
+          scripts/install-tools.sh "$PWD/.tools"
+          cat > /tmp/targets.yaml <<'EOF'
+          notify:
+            suppress_file: ""
+            policy: {min_severity: LOW, only_fixable: false, notify_reboot_required: false}
+          targets:
+            - {id: os, type: os-packages}
+            - {id: usr-bin, type: dir, path: /usr/bin}
+            - {id: opt, type: dir, path_glob: "/opt/*"}
+            - {id: disabled, type: dir, path: /x, enabled: false}
+          EOF
+          { echo "data_dir: /tmp/smoke-py"; echo 'secrets_file: ""'
+            echo "tools: {syft: $PWD/.tools/syft, trivy: $PWD/.tools/trivy}"; cat /tmp/targets.yaml; } > /tmp/py.yaml
+          { echo "data_dir: /var/lib/sbomops"; echo 'secrets_file: ""'; cat /tmp/targets.yaml; } > /tmp/ct.yaml
+          bin/sbomops -c /tmp/py.yaml run --dry-run > /tmp/py.json
+          docker volume create smoke-ct
+          docker run --rm -v /:/host:ro -v smoke-ct:/var/lib/sbomops -v /tmp/ct.yaml:/etc/sbomops/config.yaml:ro \
+            sbomops:test run --dry-run > /tmp/ct.json
+          docker run --rm --entrypoint cat -v smoke-ct:/d sbomops:test /d/state.db > /tmp/ct.db
+          python3 scripts/compare-impl.py /tmp/py.json /tmp/ct.json /tmp/smoke-py/state.db /tmp/ct.db
+          # /host を付け忘れたら分かるエラーで止まること
+          ! docker run --rm sbomops:test targets 2> /tmp/err.txt
+          grep -q "host_root /host がない" /tmp/err.txt
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=short
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=pr
+      - uses: docker/login-action@v3
+        if: github.event_name == 'push'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: build & push (amd64 + arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

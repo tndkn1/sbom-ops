@@ -1,0 +1,19 @@
+# コンテナ用の既定の設定。自分の設定を使うときは -v ./config.yaml:/etc/sbomops/config.yaml:ro で差し替える
+# (書き方は config/sbomops.example.yaml。パスはホスト上のパスで書く。/host は付けない)。
+# host_root は環境変数 SBOMOPS_HOST_ROOT=/host で決まる。
+data_dir: /var/lib/sbomops
+secrets_file: /etc/sbomops/secrets.env   # 無ければ環境変数 SLACK_WEBHOOK_URL を使う
+
+notify:
+  suppress_file: /etc/sbomops/accepted.tsv
+  policy:
+    min_severity: CRITICAL
+  slack:
+    enabled: true
+
+targets:
+  - {id: os, type: os-packages, every: 1d}
+  - {id: usr-local, type: dir, path: /usr/local, every: 7d}
+  - {id: opt, type: dir, path: /opt, every: 7d}
+  # docker / podman のソケットをマウントしたときだけ調べられる (ないと「調査対象外」に出る)
+  - {id: containers, type: running-images, every: 7d}

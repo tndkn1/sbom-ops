@@ -19,6 +19,15 @@ Ubuntu / Debian と RHEL 系 (RHEL 8/9、Rocky、Alma) のどちらでも動く�
 Python 版 (このディレクトリ) と、同じ設定・状態 DB・通知を持つ **Go 版** ([go/](go/README.md)、単一バイナリ) がある。
 両者の振る舞いは [spec/](spec/README.md) の共通テストデータで同期させている。
 
+**コンテナで動かすのがいちばん簡単** (Go 版 + syft + trivy 入りのイメージを CI が毎回作る。詳しくは [container/](container/README.md)):
+
+```sh
+docker run -d --name sbomops --restart unless-stopped \
+  -v /:/host:ro -v sbomops-data:/var/lib/sbomops \
+  -e TZ=Asia/Tokyo -e SLACK_WEBHOOK_URL=https://hooks.slack.com/services/... \
+  ghcr.io/tndkn1/sbom-ops:latest
+```
+
 ## 必要なもの
 
 - Python 3.9 以上 (標準ライブラリのみ。設定を YAML で書くなら PyYAML)

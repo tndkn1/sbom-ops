@@ -78,7 +78,8 @@ def expand(cfg: dict, with_images: bool = True,
             if t.get("path"):
                 paths += [t["path"]] if isinstance(t["path"], str) else list(t["path"])
             for g in ([t["path_glob"]] if isinstance(t.get("path_glob"), str) else t.get("path_glob") or []):
-                paths += sorted(p.rstrip("/") for p in glob.glob(g) if os.path.isdir(p))
+                # host_root の下を探し、ホスト上のパスに戻す
+                paths += sorted(host.unhpath(p.rstrip("/")) for p in glob.glob(host.hpath(g)) if os.path.isdir(p))
             skip = t.get("skip") or []
             for p in paths:
                 if any(fnmatch.fnmatch(p, s) for s in skip):
@@ -86,7 +87,7 @@ def expand(cfg: dict, with_images: bool = True,
             paths = [p for p in paths if not any(fnmatch.fnmatch(p, s) for s in skip)]
             multi = bool(t.get("path_glob")) or len(paths) > 1
             for p in paths:
-                if not os.path.isdir(p):
+                if not os.path.isdir(host.hpath(p)):
                     log.info("-- %s: %s がない (スキップ)", t["id"], p)
                     skipped.append((f"{t['id']}: {p}", "パスがない"))
                     continue

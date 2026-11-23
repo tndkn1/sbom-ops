@@ -1,6 +1,7 @@
 {
   "config": {
     "host_label": null,
+    "host_root": "/",
     "data_dir": "/var/lib/sbomops",
     "secrets_file": "/etc/sbomops/secrets.env",
     "tools": {

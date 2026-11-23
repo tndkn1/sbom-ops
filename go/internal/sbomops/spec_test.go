@@ -501,6 +501,8 @@ type scenario struct {
 	Config map[string]any   `json:"config"`
 	Policy map[string]any   `json:"policy"`
 	Steps  []map[string]any `json:"steps"`
+	Files  any              `json:"files"`
+	Dirs   []string         `json:"dirs"`
 }
 
 func substMap(v any, m [][2]string) any {
@@ -565,6 +567,14 @@ func runScenario(t *testing.T, base map[string]any, sc scenario) {
 		m = append(m, [2]string{fmt.Sprintf("{today+%d}", n), now.AddDate(0, 0, n).Format("2006-01-02")},
 			[2]string{fmt.Sprintf("{today-%d}", n), now.AddDate(0, 0, -n).Format("2006-01-02")})
 	}
+	files, _ := sc.Files.(map[string]any)
+	for rel, body := range files {
+		os.MkdirAll(filepath.Dir(filepath.Join(d, rel)), 0o755)
+		os.WriteFile(filepath.Join(d, rel), []byte(body.(string)), 0o644)
+	}
+	for _, rel := range sc.Dirs {
+		os.MkdirAll(filepath.Join(d, rel), 0o755)
+	}
 	user := mergeAny(base, sc.Config)
 	notify := user["notify"].(map[string]any)
 	user["notify"] = mergeAny(notify, map[string]any{"policy": orEmpty(sc.Policy)})
@@ -611,7 +621,25 @@ func runScenario(t *testing.T, base map[string]any, sc scenario) {
 			if err != nil {
 				t.Fatalf("%s: %v", ctx, err)
 			}
-			checkExpect(t, ctx, step["expect"].(map[string]any), rc, sent[before:])
+			exp := step["expect"].(map[string]any)
+			checkExpect(t, ctx, exp, rc, sent[before:])
+			if meta, ok := exp["meta"].(map[string]any); ok {
+				st, err := OpenDataStore(cfg)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for k, w := range meta {
+					got, want := st.GetMetaString(k), w.(string)
+					if strings.HasPrefix(want, "!") {
+						if got == want[1:] || got == "" {
+							t.Errorf("%s: meta %s = %q", ctx, k, got)
+						}
+					} else if got != want {
+						t.Errorf("%s: meta %s = %q; want %q", ctx, k, got, want)
+					}
+				}
+				st.Close()
+			}
 		default:
 			t.Fatalf("不明な step: %v", step)
 		}
@@ -644,6 +672,18 @@ func checkExpect(t *testing.T, ctx string, e map[string]any, rc int, sent []*Rep
 		}
 		if !reflect.DeepEqual(got, v) {
 			t.Errorf("%s: items = %v", ctx, got)
+		}
+	}
+	if v, ok := e["host"]; ok && rp.Host != v {
+		t.Errorf("%s: host = %q", ctx, rp.Host)
+	}
+	if v, ok := e["locations"]; ok {
+		got := []any{}
+		for _, it := range rp.Items {
+			got = append(got, it.Row.Location)
+		}
+		if !reflect.DeepEqual(got, v) {
+			t.Errorf("%s: locations = %v", ctx, got)
 		}
 	}
 	if v, ok := e["resolved"]; ok {

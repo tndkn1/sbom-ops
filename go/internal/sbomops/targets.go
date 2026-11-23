@@ -118,9 +118,10 @@ func ExpandTargets(cfg *Config, withImages bool, skipped *[]Skip) ([]Unit, map[s
 			paths = append(paths, strList(t.Path)...)
 			for _, g := range strList(t.PathGlob) {
 				var ms []string
-				for _, p := range pyGlob(g) {
+				// host_root の下を探し、ホスト上のパスに戻す
+				for _, p := range pyGlob(hpath(g)) {
 					if isDir(p) {
-						ms = append(ms, strings.TrimRight(p, "/"))
+						ms = append(ms, unhpath(strings.TrimRight(p, "/")))
 					}
 				}
 				sort.Strings(ms)
@@ -143,7 +144,7 @@ func ExpandTargets(cfg *Config, withImages bool, skipped *[]Skip) ([]Unit, map[s
 			}
 			multi := truthy(t.PathGlob) || len(kept) > 1
 			for _, p := range kept {
-				if !isDir(p) {
+				if !isDir(hpath(p)) {
 					logInfo("-- %s: %s がない (スキップ)", t.ID, p)
 					skip(fmt.Sprintf("%s: %s", t.ID, p), "パスがない")
 					continue

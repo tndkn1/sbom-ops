@@ -1,0 +1,88 @@
+{
+  "_doc": "host_root (コンテナでホストの / を /host にマウントした状態) の下を調べ、パス・unit・ホスト名はホスト上のものにする",
+  "files": {
+    "hostroot/etc/hostname": "web-01\n",
+    "hostroot/etc/os-release": "ID=testos\nVERSION_ID=\"1.0\"\n"
+  },
+  "dirs": [
+    "hostroot/app",
+    "hostroot/g/one",
+    "hostroot/g/skip-me",
+    "hostroot/g/.hidden"
+  ],
+  "config": {
+    "host_root": "{dir}/hostroot",
+    "targets": [
+      {
+        "id": "app",
+        "type": "dir",
+        "path": "/app"
+      },
+      {
+        "id": "globbed",
+        "type": "dir",
+        "path_glob": "/g/*",
+        "skip": [
+          "/g/skip-*"
+        ]
+      },
+      {
+        "id": "gone",
+        "type": "dir",
+        "path": "/nonexistent"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "set_version": "1.0"
+    },
+    {
+      "run": {},
+      "expect": {
+        "rc": 0,
+        "sent": true,
+        "host": "web-01",
+        "items": [
+          [
+            "CVE-2099-0001",
+            "new"
+          ],
+          [
+            "CVE-2099-0001",
+            "new"
+          ]
+        ],
+        "locations": [
+          "/app/lib/example-1.0.dist-info/METADATA",
+          "/g/one/lib/example-1.0.dist-info/METADATA"
+        ],
+        "skipped": [
+          [
+            "globbed: /g/skip-me",
+            "skip に一致"
+          ],
+          [
+            "gone: /nonexistent",
+            "パスがない"
+          ]
+        ],
+        "timings": [
+          {
+            "unit": "app",
+            "syft": "ok",
+            "trivy": "ok"
+          },
+          {
+            "unit": "globbed:g_one",
+            "syft": "ok",
+            "trivy": "ok"
+          }
+        ],
+        "meta": {
+          "os_fingerprint": "testos-1.0"
+        }
+      }
+    }
+  ]
+}
