@@ -1,0 +1,137 @@
+{
+  "config": {
+    "host_label": null,
+    "data_dir": "/var/lib/sbomops",
+    "secrets_file": "/etc/sbomops/secrets.env",
+    "tools": {
+      "syft": null,
+      "trivy": null
+    },
+    "resources": {
+      "nice": 19,
+      "ionice_class": "idle",
+      "mem_max": "4G",
+      "syft_parallelism": 2,
+      "wrap": []
+    },
+    "run": {
+      "scan_budget": "3h",
+      "stale_factor": 2,
+      "rescan_on_os_change": true
+    },
+    "targets": [],
+    "trivy": {
+      "db_repository": [],
+      "extra_args": [],
+      "db_max_age": "3d"
+    },
+    "enrich": {
+      "kev": true,
+      "kev_url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+      "epss": true,
+      "epss_url": "https://epss.empiricalsecurity.com/epss_scores-current.csv.gz",
+      "refresh": "1d"
+    },
+    "noise": {
+      "old_kernels": true,
+      "distro_owned": true,
+      "distro_vendor_regex": "(?i)ubuntu|debian|red hat|rocky|almalinux|centos|fedora|oracle|suse|amazon",
+      "package_cache": true,
+      "paths": []
+    },
+    "notify": {
+      "policy": {
+        "min_severity": "HIGH",
+        "only_fixable": true,
+        "always_notify": {
+          "kev": true,
+          "epss_gte": 0.5
+        },
+        "vendor_status_ignore": [
+          "will_not_fix",
+          "end_of_life"
+        ],
+        "repeat": "until_fixed",
+        "remind_every": "1d",
+        "report_resolved": true,
+        "quiet_when_empty": true,
+        "notify_reboot_required": true,
+        "notify_warnings": true,
+        "max_items": 30,
+        "group_by_package": true,
+        "report_timings": true,
+        "report_skipped": true
+      },
+      "suppress_file": "/etc/sbomops/accepted.tsv",
+      "slack": {
+        "enabled": false,
+        "webhook_env": "SLACK_WEBHOOK_URL",
+        "mention": "<!here>",
+        "mention_on": [
+          "kev",
+          "critical"
+        ],
+        "timeout": 20
+      }
+    },
+    "assess": {
+      "enabled": false,
+      "engine": "claude",
+      "command": null,
+      "model": null,
+      "run_as": null,
+      "max_per_run": 20,
+      "cache": "30d",
+      "timeout": "15m",
+      "include_host_context": false,
+      "redact": {
+        "hostname": true,
+        "home_paths": true
+      },
+      "language": "ja"
+    },
+    "retention": {
+      "results_days": 14,
+      "logs_days": null,
+      "sbom_keep": 3
+    }
+  },
+  "target": {
+    "every": "1d",
+    "enabled": true,
+    "exclude": [],
+    "syft_args": [],
+    "max_runtime": "2h",
+    "mem_max": null
+  },
+  "severities": [
+    "CRITICAL",
+    "HIGH",
+    "MEDIUM",
+    "LOW",
+    "UNKNOWN"
+  ],
+  "system_excludes": [
+    "/proc",
+    "/sys",
+    "/dev",
+    "/run",
+    "/tmp",
+    "/var/tmp",
+    "/lost+found",
+    "/var/lib/docker",
+    "/var/lib/containerd",
+    "/var/lib/containers",
+    "/var/lib/snapd",
+    "/snap",
+    "/var/cache",
+    "/var/log",
+    "/media",
+    "/mnt"
+  ],
+  "search_paths": [
+    "/etc/sbomops/config.yaml",
+    "/etc/sbomops/config.yml",
+    "/etc/sbomops/config.json"
+  ]
+}

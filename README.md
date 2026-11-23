@@ -16,6 +16,9 @@ Ubuntu / Debian と RHEL 系 (RHEL 8/9、Rocky、Alma) のどちらでも動く�
 - **AI による評価 (任意)**: 通知対象を Claude Code / Codex に渡し、このホストでの優先度 (P1〜P4) と対処を通知に付ける
 - **OS の更新を検知**: os-release が変わったら全単位の SBOM を作り直す。SBOM が古くなったら警告する
 
+Python 版 (このディレクトリ) と、同じ設定・状態 DB・通知を持つ **Go 版** ([go/](go/README.md)、単一バイナリ) がある。
+両者の振る舞いは [spec/](spec/README.md) の共通テストデータで同期させている。
+
 ## 必要なもの
 
 - Python 3.9 以上 (標準ライブラリのみ。設定を YAML で書くなら PyYAML)
@@ -149,3 +152,10 @@ bin/sbomops -c config/local-dev.yaml run --dry-run   # data_dir を書き換え�
 
 通知先を足すときは `sbomops/notify/base.py` の `Notifier` を継承して `render` / `send` を実装し、
 `sbomops/notify/__init__.py` の `REGISTRY` に登録する (設定は `notify.<名前>.enabled`)。
+
+振る舞いを変えるときは Python 版・Go 版・`spec/` を一緒に直す (手順は [spec/README.md](spec/README.md))。
+
+```sh
+python3 spec/gen.py                        # Python 版から spec の期待値を作り直す
+(cd go && go test ./...)                   # Go 版が spec を満たすか
+```

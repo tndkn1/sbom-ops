@@ -44,3 +44,66 @@ jobs:
           bin/sbomops -c /tmp/smoke.yaml run --dry-run > /tmp/payload.json
           ${SBOMOPS_PYTHON:-python3} -c 'import json; d=json.load(open("/tmp/payload.json")); print(d["text"])'
           bin/sbomops -c /tmp/smoke.yaml status
+
+  # spec/ の期待値が Python 版の出力と一致しているか (Python 版を直したら spec/gen.py で更新する)
+  spec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq python3-yaml >/dev/null
+      - name: spec の期待値が最新か
+        run: |
+          python3 spec/gen.py
+          git diff --exit-code spec/ || { echo "::error::spec/ の期待値が古い。python3 spec/gen.py を実行してコミットしてください"; exit 1; }
+
+  go:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: go
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - run: go vet ./...
+      - name: unit tests (spec/ の共通データ)
+        run: go test -count=1 ./...
+      - name: build
+        run: CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o sbomops-go ./cmd/sbomops-go
+
+  # 本物の syft / trivy で両方を動かし、Slack のペイロードと状態 DB が同じになることを確かめる
+  compare:
+    runs-on: ubuntu-latest
+    needs: [go]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq python3-yaml >/dev/null
+      - name: build
+        run: cd go && go build -o /tmp/sbomops-go ./cmd/sbomops-go
+      - name: run both
+        run: |
+          scripts/install-tools.sh "$PWD/.tools"
+          for impl in py go; do
+            cat > /tmp/cmp-$impl.yaml <<EOF
+          data_dir: /tmp/cmp-data-$impl
+          secrets_file: ""
+          notify:
+            suppress_file: ""
+            policy: {min_severity: LOW, only_fixable: false, notify_reboot_required: false}
+          targets:
+            - {id: os, type: os-packages}
+            - {id: usr-bin, type: dir, path: /usr/bin}
+            - {id: disabled, type: dir, path: /x, enabled: false}
+          EOF
+          done
+          bin/sbomops -c /tmp/cmp-py.yaml run --dry-run > /tmp/cmp-py.json
+          /tmp/sbomops-go -c /tmp/cmp-go.yaml run --dry-run > /tmp/cmp-go.json
+          python3 scripts/compare-impl.py /tmp/cmp-py.json /tmp/cmp-go.json /tmp/cmp-data-py/state.db /tmp/cmp-data-go/state.db

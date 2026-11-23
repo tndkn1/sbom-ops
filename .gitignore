@@ -5,3 +5,4 @@ __pycache__/
 /dev-data/
 config/local*.yaml
 secrets.env
+/go/sbomops-go

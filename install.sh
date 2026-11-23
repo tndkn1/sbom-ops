@@ -3,6 +3,7 @@
 #   sudo ./install.sh            本体・ツール・設定の雛形・systemd ユニットを配置
 #   sudo ./install.sh --enable   上に加えてタイマーを有効化
 #   sudo ./install.sh --no-tools syft / trivy を入れ直さない
+#   sudo ./install.sh --go       Python 版の代わりに Go 版 (go/sbomops-go、事前にビルド) を入れる
 set -euo pipefail
 
 [[ $EUID -eq 0 ]] || { echo "root で実行してください (sudo ./install.sh)" >&2; exit 1; }
@@ -10,17 +11,27 @@ SRC="$(cd "$(dirname "$0")" && pwd)"
 PREFIX=/opt/sbomops
 ETC=/etc/sbomops
 DATA=/var/lib/sbomops
-enable=0 tools=1
+enable=0 tools=1 use_go=0
 for a in "$@"; do
   case $a in
     --enable) enable=1 ;;
     --no-tools) tools=0 ;;
+    --go) use_go=1 ;;
     *) echo "不明な引数: $a" >&2; exit 2 ;;
   esac
 done
 
+if (( use_go )); then
+  [[ -x $SRC/go/sbomops-go ]] || {
+    echo "go/sbomops-go がありません。先に一般ユーザーでビルドしてください:" >&2
+    echo "  (cd go && CGO_ENABLED=0 go build -trimpath -ldflags '-s -w' -o sbomops-go ./cmd/sbomops-go)" >&2
+    exit 1
+  }
+fi
+
 # Python 3.9 以上 (RHEL 8 は python39 を入れて SBOMOPS_PYTHON=python3.9 を使う)
 PY=${SBOMOPS_PYTHON:-python3}
+if (( ! use_go )); then
 if ! "$PY" -c 'import sys; sys.exit(sys.version_info < (3, 9))' 2>/dev/null; then
   for c in python3.12 python3.11 python3.9; do
     if command -v "$c" >/dev/null; then PY=$c; break; fi
@@ -30,6 +41,7 @@ if ! "$PY" -c 'import sys; sys.exit(sys.version_info < (3, 9))' 2>/dev/null; the
 fi
 "$PY" -c 'import yaml' 2>/dev/null \
   || echo "注意: PyYAML がないため設定は JSON で書く必要があります (apt install python3-yaml / dnf install python3-pyyaml)"
+fi
 
 echo "-- 本体を $PREFIX に配置"
 install -d -m 0755 "$PREFIX" "$PREFIX/bin"
@@ -44,6 +56,10 @@ install -m 0755 "$SRC/bin/sbomops" "$PREFIX/bin/sbomops"
 install -m 0644 "$SRC/README.md" "$PREFIX/README.md"
 if [[ $PY != python3 ]]; then
   sed -i "s|\${SBOMOPS_PYTHON:-python3}|\${SBOMOPS_PYTHON:-$PY}|" "$PREFIX/bin/sbomops"
+fi
+if (( use_go )); then
+  echo "-- Go 版を $PREFIX/bin/sbomops に配置"
+  install -o root -g root -m 0755 "$SRC/go/sbomops-go" "$PREFIX/bin/sbomops"
 fi
 ln -sf "$PREFIX/bin/sbomops" /usr/local/bin/sbomops
 
